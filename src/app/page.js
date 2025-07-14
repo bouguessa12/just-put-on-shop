@@ -165,7 +165,7 @@ export default function LandingPage() {
           <div className={`transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 tracking-tight leading-tight text-white drop-shadow-2xl font-serif">
               <span className="block">PREMIUM</span>
-              <span className="block text-purple-400">MEN'S FASHION</span>
+              <span className="block text-purple-400">MEN&apos;S FASHION</span>
             </h1>
             <p className="text-lg md:text-xl lg:text-2xl text-white mb-8 max-w-3xl mx-auto leading-relaxed font-light">
               Curated collections for the discerning gentleman. 
@@ -210,7 +210,7 @@ export default function LandingPage() {
               Premium Collections
             </h2>
             <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-              Exclusively curated for the modern gentleman. Discover our signature 2025 men's collections.
+              Exclusively curated for the modern gentleman. Discover our signature 2025 men&apos;s collections.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -327,7 +327,7 @@ export default function LandingPage() {
               </div>
               <div className="p-6 text-center">
                 <h3 className="text-xl font-bold mb-2 group-hover:text-purple-600 transition-colors font-serif">{cat.name}</h3>
-                <p className="text-gray-600 text-sm font-light">Premium men's essentials</p>
+                <p className="text-gray-600 text-sm font-light">Premium men&apos;s essentials</p>
               </div>
             </Link>
           ))}

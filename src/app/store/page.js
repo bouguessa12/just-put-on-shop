@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
 // Algeria wilayas and baladias
@@ -90,11 +91,7 @@ export default function StorePage() {
     notes: ''
   });
 
-  useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     let query = supabase.from('products').select('*');
     
@@ -118,7 +115,11 @@ export default function StorePage() {
     }
     
     setLoading(false);
-  };
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const filteredProducts = selectedCategory
     ? products.filter((product) => {
@@ -248,7 +249,7 @@ export default function StorePage() {
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-lg">
             <div className="mb-4">
-              <p>No products found for "{selectedCategory}".</p>
+              <p>No products found for &quot;{selectedCategory}&quot;.</p>
               <p className="text-sm mt-2">Available categories: {[...new Set(products.map(p => p.category))].join(', ')}</p>
             </div>
             <a href="/store" className="text-purple-600 hover:text-purple-800 underline">
@@ -261,7 +262,7 @@ export default function StorePage() {
               <div key={product.id} className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
                 <div className="relative w-full h-64 bg-gray-100 flex items-center justify-center">
                   {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    <Image src={product.image_url} alt={product.name} fill className="object-cover" />
                   ) : (
                     <span className="text-gray-400">No image</span>
                   )}
