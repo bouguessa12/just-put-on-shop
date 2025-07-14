@@ -4,6 +4,9 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
+// Force dynamic rendering to avoid build-time errors
+export const dynamic = 'force-dynamic';
+
 // Algeria wilayas and baladias
 const WILAYAS = [
   { id: 1, name: 'Adrar' },
@@ -92,29 +95,44 @@ export default function StorePage() {
   });
 
   const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    let query = supabase.from('products').select('*');
-    
-    if (selectedCategory) {
-      const categoryVariations = [
-        selectedCategory.toLowerCase(),
-        selectedCategory.toLowerCase().replace(/\s+/g, ''),
-        selectedCategory.toLowerCase().replace(/\s+/g, '-'),
-        selectedCategory.toLowerCase().replace(/\s+/g, '_')
-      ];
+    try {
+      setLoading(true);
       
-      query = query.in('category', categoryVariations);
+      // Check if Supabase is properly configured
+      if (!supabase) {
+        console.error('Supabase client not initialized');
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+      
+      let query = supabase.from('products').select('*');
+      
+      if (selectedCategory) {
+        const categoryVariations = [
+          selectedCategory.toLowerCase(),
+          selectedCategory.toLowerCase().replace(/\s+/g, ''),
+          selectedCategory.toLowerCase().replace(/\s+/g, '-'),
+          selectedCategory.toLowerCase().replace(/\s+/g, '_')
+        ];
+        
+        query = query.in('category', categoryVariations);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching products:', error);
+        setProducts([]);
+      } else {
+        setProducts(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchProducts:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching products:', error);
-    } else {
-      setProducts(data || []);
-    }
-    
-    setLoading(false);
   }, [selectedCategory]);
 
   useEffect(() => {
@@ -174,6 +192,13 @@ export default function StorePage() {
 
     try {
       console.log('Submitting order with data:', orderForm);
+      
+      // Check if Supabase is properly configured
+      if (!supabase) {
+        alert('Database connection not available. Please try again later.');
+        setOrderLoading(false);
+        return;
+      }
       
       const orderData = {
         customer_name: orderForm.customerName,
