@@ -74,8 +74,14 @@ export default function StorePage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const searchParams = useSearchParams();
   const selectedCategory = searchParams.get('category');
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Order form state
   const [orderForm, setOrderForm] = useState({
@@ -257,6 +263,19 @@ export default function StorePage() {
 
     setOrderLoading(false);
   };
+
+  // Don't render anything during SSR
+  if (!isClient) {
+    return (
+      <main className="min-h-screen bg-white text-gray-900 px-4 py-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white text-gray-900 px-4 py-12">
