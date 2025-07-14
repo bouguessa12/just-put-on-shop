@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* 
+  *** THE FIX IS HERE ***
+  We are changing the default background to be dark.
+  Previously it was #ffffff (white). Now it is #0a0a0a (dark).
+  This acts as a failsafe so you never see a white background.
+*/
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* 
+  This part is no longer strictly necessary since the default is now dark, 
+  but it is good practice to keep it for users who do switch themes.
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  /*
+    Your original body styles are preserved,
+    but we will also add a failsafe margin: 0 here again.
+  */
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  @keyframes fade-in-up {
+    0% { opacity: 0; transform: translateY(40px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 1s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  .delay-200 { animation-delay: 0.2s; }
+  .delay-300 { animation-delay: 0.3s; }
+}
