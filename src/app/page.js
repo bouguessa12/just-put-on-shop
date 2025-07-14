@@ -341,7 +341,7 @@ export default function LandingPage() {
             <div className="space-y-8">
               <h2 className="text-4xl md:text-5xl font-bold">Our Story</h2>
               <p className="text-xl text-gray-300 leading-relaxed">
-                Just Put On is more than a brand—it's a movement for those who want to stand out 
+                Just Put On is more than a brand—it&apos;s a movement for those who want to stand out 
                 with confidence and comfort. We blend the edge of streetwear with timeless style, 
                 curating collections that empower you to own your look every day.
               </p>
