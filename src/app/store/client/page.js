@@ -94,9 +94,6 @@ export default function ClientStorePage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const category = urlParams.get('category');
-      console.log('Category from URL:', category);
-      console.log('Full URL:', window.location.href);
-      console.log('Search params:', window.location.search);
       setSelectedCategory(category);
     }
   }, []);
@@ -108,7 +105,6 @@ export default function ClientStorePage() {
         const urlParams = new URLSearchParams(window.location.search);
         const category = urlParams.get('category');
         if (category !== selectedCategory) {
-          console.log('Category changed to:', category);
           setSelectedCategory(category);
         }
       }
@@ -138,8 +134,6 @@ export default function ClientStorePage() {
         setProducts([]);
       } else {
         setProducts(data || []);
-        const uniqueCategories = [...new Set((data || []).map(p => p.category))];
-        console.log('Available categories in database:', uniqueCategories);
       }
     } catch (error) {
       console.error('Error in fetchProducts:', error);
@@ -159,8 +153,6 @@ export default function ClientStorePage() {
         
         const productCategory = product.category.toLowerCase();
         const searchCategory = selectedCategory.toLowerCase();
-        
-        console.log('Comparing:', productCategory, 'with', searchCategory);
         
         // Exact match
         if (productCategory === searchCategory) return true;
@@ -292,33 +284,6 @@ export default function ClientStorePage() {
             ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products`
             : 'Shop All Products'}
         </h1>
-        <div className="text-center mb-4 text-sm text-gray-500">
-          Debug: URL = {typeof window !== 'undefined' ? window.location.href : 'N/A'} | 
-          Category = &quot;{selectedCategory || 'None'}&quot; | 
-          Found {filteredProducts.length} products
-        </div>
-        
-        {/* Test buttons */}
-        <div className="text-center mb-8">
-          <button 
-            onClick={() => window.location.href = '/store/client?category=streetwear'}
-            className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
-          >
-            Test Streetwear
-          </button>
-          <button 
-            onClick={() => window.location.href = '/store/client?category=oldmoney'}
-            className="bg-green-500 text-white px-4 py-2 rounded mr-2"
-          >
-            Test Old Money
-          </button>
-          <button 
-            onClick={() => window.location.href = '/store/client'}
-            className="bg-gray-500 text-white px-4 py-2 rounded"
-          >
-            Test All Products
-          </button>
-        </div>
         
         {loading ? (
           <div className="flex justify-center items-center h-64">

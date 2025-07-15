@@ -1,15 +1,17 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Dialog } from '@headlessui/react'
-import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, HomeIcon, ShoppingBagIcon, UserCircleIcon, CogIcon, ShoppingCartIcon } from '@heroicons/react/24/solid'
+import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, HomeIcon, ShoppingBagIcon, UserCircleIcon, CogIcon, ShoppingCartIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid'
 
 const CLOTHING_SIZES = ['S', 'M', 'L', 'XL']
 const SHOE_SIZES = Array.from({ length: 11 }, (_, i) => (35 + i).toString())
 const COLORS = ['Black', 'White', 'Red', 'Green', 'Blue', 'Beige']
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterCategory, setFilterCategory] = useState('')
@@ -23,6 +25,7 @@ export default function AdminDashboard() {
   const [logoError, setLogoError] = useState(false)
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [user, setUser] = useState(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -50,10 +53,25 @@ export default function AdminDashboard() {
   const [editCategoryLoading, setEditCategoryLoading] = useState(false);
 
   useEffect(() => {
+    checkSession()
     fetchProducts()
     fetchCategories();
     fetchOrders();
   }, [filterCategory])
+
+  const checkSession = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      router.push('/admin/login')
+      return
+    }
+    setUser(session.user)
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/admin/login')
+  }
 
   const fetchProducts = async () => {
     setLoading(true)
