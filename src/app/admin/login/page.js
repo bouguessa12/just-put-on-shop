@@ -33,6 +33,8 @@ export default function AdminLogin() {
         password: password,
       })
 
+      console.log('Login response:', { data, error })
+
       if (error) {
         setError(error.message)
       } else if (data.session) {
@@ -42,6 +44,7 @@ export default function AdminLogin() {
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
+      console.error('Login error:', error)
     } finally {
       setLoading(false)
     }
