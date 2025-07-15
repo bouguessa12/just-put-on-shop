@@ -292,7 +292,21 @@ function StoreContent() {
               <div key={product.id} className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
                 <div className="relative w-full h-64 bg-gray-100 flex items-center justify-center">
                   {product.image_url ? (
-                    <Image src={product.image_url} alt={product.name} fill className="object-cover" />
+                    <>
+                      <Image 
+                        src={product.image_url} 
+                        alt={product.name} 
+                        fill 
+                        className="object-cover"
+                        onError={(e) => {
+                          console.error('Image failed to load:', product.image_url);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute top-2 right-2 text-xs bg-black/50 text-white px-2 py-1 rounded">
+                        Debug: {product.image_url ? 'Has URL' : 'No URL'}
+                      </div>
+                    </>
                   ) : (
                     <span className="text-gray-400">No image</span>
                   )}
