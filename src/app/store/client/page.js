@@ -95,9 +95,29 @@ export default function ClientStorePage() {
       const urlParams = new URLSearchParams(window.location.search);
       const category = urlParams.get('category');
       console.log('Category from URL:', category);
+      console.log('Full URL:', window.location.href);
       setSelectedCategory(category);
     }
   }, []);
+  
+  // Also check URL on every render to catch navigation changes
+  useEffect(() => {
+    const checkURL = () => {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const category = urlParams.get('category');
+        if (category !== selectedCategory) {
+          console.log('Category changed to:', category);
+          setSelectedCategory(category);
+        }
+      }
+    };
+    
+    checkURL();
+    // Check every second for URL changes
+    const interval = setInterval(checkURL, 1000);
+    return () => clearInterval(interval);
+  }, [selectedCategory]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -271,11 +291,11 @@ export default function ClientStorePage() {
             ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products`
             : 'Shop All Products'}
         </h1>
-        {selectedCategory && (
-          <div className="text-center mb-4 text-sm text-gray-500">
-            Debug: Filtering by category "{selectedCategory}" | Found {filteredProducts.length} products
-          </div>
-        )}
+        <div className="text-center mb-4 text-sm text-gray-500">
+          Debug: URL = {typeof window !== 'undefined' ? window.location.href : 'N/A'} | 
+          Category = "{selectedCategory || 'None'}" | 
+          Found {filteredProducts.length} products
+        </div>
         
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -297,21 +317,16 @@ export default function ClientStorePage() {
               <div key={product.id} className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
                 <div className="relative w-full h-64 bg-gray-100 flex items-center justify-center">
                   {product.image_url ? (
-                    <>
-                      <Image 
-                        src={product.image_url} 
-                        alt={product.name} 
-                        fill 
-                        className="object-cover"
-                        onError={(e) => {
-                          console.error('Image failed to load:', product.image_url);
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute top-2 right-2 text-xs bg-black/50 text-white px-2 py-1 rounded">
-                        Debug: {product.image_url ? 'Has URL' : 'No URL'}
-                      </div>
-                    </>
+                    <Image 
+                      src={product.image_url} 
+                      alt={product.name} 
+                      fill 
+                      className="object-cover"
+                      onError={(e) => {
+                        console.error('Image failed to load:', product.image_url);
+                        e.target.style.display = 'none';
+                      }}
+                    />
                   ) : (
                     <span className="text-gray-400">No image</span>
                   )}
