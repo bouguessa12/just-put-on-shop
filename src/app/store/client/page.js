@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -65,35 +64,13 @@ const WILAYAS = [
   { id: 57, name: 'In Salah' },
 ];
 
-function StoreContent() {
+export default function ClientStorePage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  
-  // Get search params safely
-  const searchParams = useSearchParams();
-  
-  useEffect(() => {
-    const category = searchParams.get('category');
-    console.log('URL category parameter:', category);
-    console.log('All URL parameters:', Object.fromEntries(searchParams.entries()));
-    setSelectedCategory(category);
-  }, [searchParams]);
-  
-  // Also get category from URL on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const category = urlParams.get('category');
-      console.log('URL category from window.location:', category);
-      if (category && !selectedCategory) {
-        setSelectedCategory(category);
-      }
-    }
-  }, [selectedCategory]);
 
   // Order form state
   const [orderForm, setOrderForm] = useState({
@@ -112,6 +89,16 @@ function StoreContent() {
     notes: ''
   });
 
+  // Get category from URL on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const category = urlParams.get('category');
+      console.log('Category from URL:', category);
+      setSelectedCategory(category);
+    }
+  }, []);
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -123,21 +110,13 @@ function StoreContent() {
         return;
       }
       
-      let query = supabase.from('products').select('*');
-      
-      if (selectedCategory) {
-        // Don't filter at database level, we'll filter in JavaScript for better matching
-        console.log('Selected category:', selectedCategory);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
       
       if (error) {
         console.error('Error fetching products:', error);
         setProducts([]);
       } else {
         setProducts(data || []);
-        // Log all unique categories for debugging
         const uniqueCategories = [...new Set((data || []).map(p => p.category))];
         console.log('Available categories in database:', uniqueCategories);
       }
@@ -147,18 +126,18 @@ function StoreContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory]);
+  }, []);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  const filteredProducts = displayCategory
+  const filteredProducts = selectedCategory
     ? products.filter((product) => {
         if (!product.category) return false;
         
         const productCategory = product.category.toLowerCase();
-        const searchCategory = displayCategory.toLowerCase();
+        const searchCategory = selectedCategory.toLowerCase();
         
         console.log('Comparing:', productCategory, 'with', searchCategory);
         
@@ -284,29 +263,17 @@ function StoreContent() {
     setOrderLoading(false);
   };
 
-  // Get category from URL directly
-  const getCategoryFromURL = () => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('category');
-    }
-    return null;
-  };
-  
-  const urlCategory = getCategoryFromURL();
-  const displayCategory = selectedCategory || urlCategory;
-  
   return (
     <main className="min-h-screen bg-white text-gray-900 px-4 py-12">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-10 text-center">
-          {displayCategory
-            ? `${displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1)} Products`
+          {selectedCategory
+            ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products`
             : 'Shop All Products'}
         </h1>
-        {displayCategory && (
+        {selectedCategory && (
           <div className="text-center mb-4 text-sm text-gray-500">
-            Debug: Filtering by category "{displayCategory}" | Found {filteredProducts.length} products | URL category: {urlCategory}
+            Debug: Filtering by category "{selectedCategory}" | Found {filteredProducts.length} products
           </div>
         )}
         
@@ -320,7 +287,7 @@ function StoreContent() {
               <p>No products found for &quot;{selectedCategory}&quot;.</p>
               <p className="text-sm mt-2">Available categories: {[...new Set(products.map(p => p.category))].join(', ')}</p>
             </div>
-            <a href="/store" className="text-purple-600 hover:text-purple-800 underline">
+            <a href="/store/client" className="text-purple-600 hover:text-purple-800 underline">
               View all products
             </a>
           </div>
@@ -548,20 +515,5 @@ function StoreContent() {
         </div>
       )}
     </main>
-  );
-}
-
-export default function ClientStorePage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading store...</p>
-        </div>
-      </div>
-    }>
-      <StoreContent />
-    </Suspense>
   );
 } 
