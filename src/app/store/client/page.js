@@ -294,7 +294,7 @@ export default function ClientStorePage() {
         </h1>
         <div className="text-center mb-4 text-sm text-gray-500">
           Debug: URL = {typeof window !== 'undefined' ? window.location.href : 'N/A'} | 
-          Category = "{selectedCategory || 'None'}" | 
+          Category = &quot;{selectedCategory || 'None'}&quot; | 
           Found {filteredProducts.length} products
         </div>
         
