@@ -96,6 +96,7 @@ export default function ClientStorePage() {
       const category = urlParams.get('category');
       console.log('Category from URL:', category);
       console.log('Full URL:', window.location.href);
+      console.log('Search params:', window.location.search);
       setSelectedCategory(category);
     }
   }, []);
@@ -295,6 +296,28 @@ export default function ClientStorePage() {
           Debug: URL = {typeof window !== 'undefined' ? window.location.href : 'N/A'} | 
           Category = "{selectedCategory || 'None'}" | 
           Found {filteredProducts.length} products
+        </div>
+        
+        {/* Test buttons */}
+        <div className="text-center mb-8">
+          <button 
+            onClick={() => window.location.href = '/store/client?category=streetwear'}
+            className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+          >
+            Test Streetwear
+          </button>
+          <button 
+            onClick={() => window.location.href = '/store/client?category=oldmoney'}
+            className="bg-green-500 text-white px-4 py-2 rounded mr-2"
+          >
+            Test Old Money
+          </button>
+          <button 
+            onClick={() => window.location.href = '/store/client'}
+            className="bg-gray-500 text-white px-4 py-2 rounded"
+          >
+            Test All Products
+          </button>
         </div>
         
         {loading ? (
