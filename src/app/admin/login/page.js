@@ -18,7 +18,7 @@ export default function AdminLogin() {
   const checkSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
-      router.push('/admin/dashboard')
+      window.location.href = '/admin/dashboard'
     }
   }
 
@@ -43,7 +43,7 @@ export default function AdminLogin() {
         console.log('Session after login:', JSON.stringify(sessionData, null, 2))
 
         if (sessionData.session) {
-          router.push('/admin/dashboard')
+          window.location.href = '/admin/dashboard'
         } else {
           setError('Login failed. Please try again.')
         }
