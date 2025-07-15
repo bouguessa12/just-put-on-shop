@@ -82,6 +82,18 @@ function StoreContent() {
     console.log('All URL parameters:', Object.fromEntries(searchParams.entries()));
     setSelectedCategory(category);
   }, [searchParams]);
+  
+  // Also get category from URL on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const category = urlParams.get('category');
+      console.log('URL category from window.location:', category);
+      if (category && !selectedCategory) {
+        setSelectedCategory(category);
+      }
+    }
+  }, [selectedCategory]);
 
   // Order form state
   const [orderForm, setOrderForm] = useState({
@@ -141,12 +153,12 @@ function StoreContent() {
     fetchProducts();
   }, [fetchProducts]);
 
-  const filteredProducts = selectedCategory
+  const filteredProducts = displayCategory
     ? products.filter((product) => {
         if (!product.category) return false;
         
         const productCategory = product.category.toLowerCase();
-        const searchCategory = selectedCategory.toLowerCase();
+        const searchCategory = displayCategory.toLowerCase();
         
         console.log('Comparing:', productCategory, 'with', searchCategory);
         
@@ -272,17 +284,29 @@ function StoreContent() {
     setOrderLoading(false);
   };
 
+  // Get category from URL directly
+  const getCategoryFromURL = () => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('category');
+    }
+    return null;
+  };
+  
+  const urlCategory = getCategoryFromURL();
+  const displayCategory = selectedCategory || urlCategory;
+  
   return (
     <main className="min-h-screen bg-white text-gray-900 px-4 py-12">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-10 text-center">
-          {selectedCategory
-            ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products`
+          {displayCategory
+            ? `${displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1)} Products`
             : 'Shop All Products'}
         </h1>
-        {selectedCategory && (
+        {displayCategory && (
           <div className="text-center mb-4 text-sm text-gray-500">
-            Debug: Filtering by category "{selectedCategory}" | Found {filteredProducts.length} products
+            Debug: Filtering by category "{displayCategory}" | Found {filteredProducts.length} products | URL category: {urlCategory}
           </div>
         )}
         
