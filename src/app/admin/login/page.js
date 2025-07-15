@@ -37,10 +37,16 @@ export default function AdminLogin() {
 
       if (error) {
         setError(error.message)
-      } else if (data.session) {
-        router.push('/admin/dashboard')
       } else {
-        setError('Login failed. Please try again.')
+        // Always check for session after login
+        const { data: sessionData } = await supabase.auth.getSession()
+        console.log('Session after login:', sessionData)
+
+        if (sessionData.session) {
+          router.push('/admin/dashboard')
+        } else {
+          setError('Login failed. Please try again.')
+        }
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
