@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function middleware(req) {
   const res = NextResponse.next()
-  
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -44,15 +44,22 @@ export async function middleware(req) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // If accessing admin routes without session, redirect to login
-  if (req.nextUrl.pathname.startsWith('/admin') && !session) {
+  // Only redirect to login if not already on login page and not authenticated
+  if (
+    req.nextUrl.pathname.startsWith('/admin') &&
+    req.nextUrl.pathname !== '/admin/login' &&
+    !session
+  ) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/admin/login'
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If accessing login page with session, redirect to dashboard
-  if (req.nextUrl.pathname === '/admin/login' && session) {
+  // Only redirect to dashboard if on login page and session exists
+  if (
+    req.nextUrl.pathname === '/admin/login' &&
+    session
+  ) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/admin/dashboard'
     return NextResponse.redirect(redirectUrl)
@@ -62,5 +69,5 @@ export async function middleware(req) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*']
+  matcher: ['/admin/:path*'],
 } 
