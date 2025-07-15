@@ -105,14 +105,8 @@ function StoreContent() {
       let query = supabase.from('products').select('*');
       
       if (selectedCategory) {
-        const categoryVariations = [
-          selectedCategory.toLowerCase(),
-          selectedCategory.toLowerCase().replace(/\s+/g, ''),
-          selectedCategory.toLowerCase().replace(/\s+/g, '-'),
-          selectedCategory.toLowerCase().replace(/\s+/g, '_')
-        ];
-        
-        query = query.in('category', categoryVariations);
+        // Don't filter at database level, we'll filter in JavaScript for better matching
+        console.log('Selected category:', selectedCategory);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -122,6 +116,9 @@ function StoreContent() {
         setProducts([]);
       } else {
         setProducts(data || []);
+        // Log all unique categories for debugging
+        const uniqueCategories = [...new Set((data || []).map(p => p.category))];
+        console.log('Available categories in database:', uniqueCategories);
       }
     } catch (error) {
       console.error('Error in fetchProducts:', error);
@@ -142,12 +139,38 @@ function StoreContent() {
         const productCategory = product.category.toLowerCase();
         const searchCategory = selectedCategory.toLowerCase();
         
+        console.log('Comparing:', productCategory, 'with', searchCategory);
+        
+        // Exact match
         if (productCategory === searchCategory) return true;
+        
+        // Remove spaces and compare
         if (productCategory.replace(/\s+/g, '') === searchCategory.replace(/\s+/g, '')) return true;
         
-        const normalizedProduct = productCategory.replace(/\s+/g, '-');
-        const normalizedSearch = searchCategory.replace(/\s+/g, '-');
-        if (normalizedProduct === normalizedSearch) return true;
+        // Replace spaces with hyphens and compare
+        if (productCategory.replace(/\s+/g, '-') === searchCategory.replace(/\s+/g, '-')) return true;
+        
+        // Replace spaces with underscores and compare
+        if (productCategory.replace(/\s+/g, '_') === searchCategory.replace(/\s+/g, '_')) return true;
+        
+        // Check if search category is contained in product category
+        if (productCategory.includes(searchCategory)) return true;
+        
+        // Check if product category is contained in search category
+        if (searchCategory.includes(productCategory)) return true;
+        
+        // Special mappings for common variations
+        const categoryMappings = {
+          'streetwear': ['street', 'urban', 'casual'],
+          'oldmoney': ['old money', 'oldmoney', 'premium', 'luxury', 'sophisticated'],
+          'shoes': ['shoe', 'footwear', 'sneakers', 'boots'],
+          'accessories': ['accessory', 'jewelry', 'watches', 'bags', 'belts']
+        };
+        
+        const mappings = categoryMappings[searchCategory];
+        if (mappings) {
+          return mappings.some(mapping => productCategory.includes(mapping));
+        }
         
         return false;
       })

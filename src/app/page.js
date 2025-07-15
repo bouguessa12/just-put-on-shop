@@ -97,7 +97,7 @@ export default function LandingPage() {
               <ul className="py-2">
                 {categories.map((cat) => (
                   <li key={cat.name}>
-                    <Link href={`/store?category=${cat.slug}`} className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                    <Link href={`/store/client?category=${cat.slug}`} className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
                       {cat.name}
                     </Link>
                   </li>
@@ -105,7 +105,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <Link href="/store" className="hover:text-purple-600 transition">Shop</Link>
+                        <Link href="/store/client" className="hover:text-purple-600 transition">Shop</Link>
           <Link href="mailto:contact@justputon.com" className="hover:text-purple-600 transition">Contact</Link>
           <a href="https://instagram.com" target="_blank" rel="noopener" className="hover:text-purple-600 transition">Instagram</a>
         </nav>
@@ -134,7 +134,7 @@ export default function LandingPage() {
               </button>
             </div>
             <nav className="space-y-4">
-              <Link href="/store" className="block py-2 hover:text-purple-600 transition">Shop</Link>
+              <Link href="/store/client" className="block py-2 hover:text-purple-600 transition">Shop</Link>
               <Link href="mailto:contact@justputon.com" className="block py-2 hover:text-purple-600 transition">Contact</Link>
               <a href="https://instagram.com" target="_blank" rel="noopener" className="block py-2 hover:text-purple-600 transition">Instagram</a>
             </nav>
@@ -173,7 +173,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
               <Link 
-                href="/store" 
+                href="/store/client" 
                 className="inline-block px-8 py-4 rounded-full bg-white text-black font-bold text-lg shadow-2xl hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
               >
                 Shop Now
@@ -280,7 +280,7 @@ export default function LandingPage() {
               </div>
             </Link>
             {/* Accessories Collection */}
-            <Link href="/store?category=accessories" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
+            <Link href="/store/client?category=accessories" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
               <Image
                 src="https://i.pinimg.com/736x/31/5b/8e/315b8e7d4e6e5a49879455a6786902c5.jpg"
                 alt="Accessories Collection"
@@ -312,7 +312,7 @@ export default function LandingPage() {
           {categories.map((cat, index) => (
             <Link 
               key={cat.name} 
-              href={`/store?category=${cat.slug}`} 
+              href={`/store/client?category=${cat.slug}`} 
               className="group block rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
               style={{ animationDelay: `${index * 100}ms` }}
             >
@@ -359,7 +359,7 @@ export default function LandingPage() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
-                  href="/store" 
+                  href="/store/client" 
                   className="bg-white text-black py-4 px-8 rounded-full font-bold text-center hover:bg-gray-100 transition-colors"
                 >
                   Shop Now
@@ -423,10 +423,10 @@ export default function LandingPage() {
             <div>
               <h3 className="font-bold mb-4">Shop</h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/store" className="hover:text-purple-600 transition">All Products</Link></li>
-                <li><Link href="/store?category=streetwear" className="hover:text-purple-600 transition">Streetwear</Link></li>
-                <li><Link href="/store?category=oldmoney" className="hover:text-purple-600 transition">Old Money</Link></li>
-                <li><Link href="/store?category=shoes" className="hover:text-purple-600 transition">Shoes</Link></li>
+                <li><Link href="/store/client" className="hover:text-purple-600 transition">All Products</Link></li>
+                <li><Link href="/store/client?category=streetwear" className="hover:text-purple-600 transition">Streetwear</Link></li>
+                <li><Link href="/store/client?category=oldmoney" className="hover:text-purple-600 transition">Old Money</Link></li>
+                <li><Link href="/store/client?category=shoes" className="hover:text-purple-600 transition">Shoes</Link></li>
               </ul>
             </div>
             <div>
