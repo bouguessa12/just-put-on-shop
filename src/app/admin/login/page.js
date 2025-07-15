@@ -33,14 +33,14 @@ export default function AdminLogin() {
         password: password,
       })
 
-      console.log('Login response:', { data, error })
+      console.log('Login response:', JSON.stringify({ data, error }, null, 2))
 
       if (error) {
         setError(error.message)
       } else {
         // Always check for session after login
         const { data: sessionData } = await supabase.auth.getSession()
-        console.log('Session after login:', sessionData)
+        console.log('Session after login:', JSON.stringify(sessionData, null, 2))
 
         if (sessionData.session) {
           router.push('/admin/dashboard')
