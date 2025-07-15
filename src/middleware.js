@@ -44,6 +44,8 @@ export async function middleware(req) {
     data: { session },
   } = await supabase.auth.getSession()
 
+  console.log('MIDDLEWARE SESSION:', JSON.stringify(session));
+
   // Only redirect to login if not already on login page and not authenticated
   if (
     req.nextUrl.pathname.startsWith('/admin') &&
