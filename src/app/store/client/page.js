@@ -71,8 +71,17 @@ function StoreContent() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  // Get search params safely
   const searchParams = useSearchParams();
-  const selectedCategory = searchParams.get('category');
+  
+  useEffect(() => {
+    const category = searchParams.get('category');
+    console.log('URL category parameter:', category);
+    console.log('All URL parameters:', Object.fromEntries(searchParams.entries()));
+    setSelectedCategory(category);
+  }, [searchParams]);
 
   // Order form state
   const [orderForm, setOrderForm] = useState({
@@ -271,6 +280,11 @@ function StoreContent() {
             ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products`
             : 'Shop All Products'}
         </h1>
+        {selectedCategory && (
+          <div className="text-center mb-4 text-sm text-gray-500">
+            Debug: Filtering by category "{selectedCategory}" | Found {filteredProducts.length} products
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center items-center h-64">
