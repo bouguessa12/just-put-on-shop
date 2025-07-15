@@ -25,7 +25,6 @@ export default function AdminDashboard() {
   const [logoError, setLogoError] = useState(false)
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [user, setUser] = useState(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -53,10 +52,6 @@ export default function AdminDashboard() {
   const [editCategoryLoading, setEditCategoryLoading] = useState(false);
 
   useEffect(() => {
-    checkSession();
-  }, []);
-
-  useEffect(() => {
     fetchProducts();
   }, [filterCategory]);
 
@@ -64,15 +59,6 @@ export default function AdminDashboard() {
     fetchCategories();
     fetchOrders();
   }, []);
-
-  const checkSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      router.push('/admin/login')
-      return
-    }
-    setUser(session.user)
-  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
