@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 // Algeria wilayas and baladias
 const WILAYAS = [
@@ -65,12 +66,13 @@ const WILAYAS = [
 ];
 
 export default function ClientStorePage() {
+  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryParam, setCategoryParam] = useState(null);
 
   // Order form state
   const [orderForm, setOrderForm] = useState({
@@ -89,103 +91,44 @@ export default function ClientStorePage() {
     notes: ''
   });
 
-  // Get category from URL on mount
-  useEffect(() => {
+  function getCategoryFromURL() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      const category = urlParams.get('category');
-      setSelectedCategory(category);
+      return urlParams.get('category');
     }
-  }, []);
-  
-  // Also check URL on every render to catch navigation changes
+    return null;
+  }
+
   useEffect(() => {
-    const checkURL = () => {
-      if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const category = urlParams.get('category');
-        if (category !== selectedCategory) {
-          setSelectedCategory(category);
-        }
-      }
+    function updateCategoryFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      setCategoryParam(urlParams.get('category'));
+    }
+
+    updateCategoryFromURL();
+
+    window.addEventListener('popstate', updateCategoryFromURL);
+    window.addEventListener('pushstate', updateCategoryFromURL);
+
+    // Monkey-patch pushState to emit an event
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      window.dispatchEvent(new Event('pushstate'));
     };
-    
-    checkURL();
-    // Check every second for URL changes
-    const interval = setInterval(checkURL, 1000);
-    return () => clearInterval(interval);
-  }, [selectedCategory]);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      if (!supabase) {
-        console.error('Supabase client not initialized');
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-      
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching products:', error);
-        setProducts([]);
-      } else {
-        setProducts(data || []);
-      }
-    } catch (error) {
-      console.error('Error in fetchProducts:', error);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
+    return () => {
+      window.removeEventListener('popstate', updateCategoryFromURL);
+      window.removeEventListener('pushstate', updateCategoryFromURL);
+      window.history.pushState = originalPushState;
+    };
   }, []);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const filteredProducts = selectedCategory
+  const filteredProducts = categoryParam
     ? products.filter((product) => {
         if (!product.category) return false;
-        
-        const productCategory = product.category.toLowerCase();
-        const searchCategory = selectedCategory.toLowerCase();
-        
-        // Exact match
-        if (productCategory === searchCategory) return true;
-        
-        // Remove spaces and compare
-        if (productCategory.replace(/\s+/g, '') === searchCategory.replace(/\s+/g, '')) return true;
-        
-        // Replace spaces with hyphens and compare
-        if (productCategory.replace(/\s+/g, '-') === searchCategory.replace(/\s+/g, '-')) return true;
-        
-        // Replace spaces with underscores and compare
-        if (productCategory.replace(/\s+/g, '_') === searchCategory.replace(/\s+/g, '_')) return true;
-        
-        // Check if search category is contained in product category
-        if (productCategory.includes(searchCategory)) return true;
-        
-        // Check if product category is contained in search category
-        if (searchCategory.includes(productCategory)) return true;
-        
-        // Special mappings for common variations
-        const categoryMappings = {
-          'streetwear': ['street', 'urban', 'casual'],
-          'oldmoney': ['old money', 'oldmoney', 'premium', 'luxury', 'sophisticated'],
-          'shoes': ['shoe', 'footwear', 'sneakers', 'boots'],
-          'accessories': ['accessory', 'jewelry', 'watches', 'bags', 'belts']
-        };
-        
-        const mappings = categoryMappings[searchCategory];
-        if (mappings) {
-          return mappings.some(mapping => productCategory.includes(mapping));
-        }
-        
-        return false;
+        const slugify = (str) => str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        return slugify(product.category) === slugify(categoryParam);
       })
     : products;
 
@@ -276,13 +219,42 @@ export default function ClientStorePage() {
     setOrderLoading(false);
   };
 
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      if (!supabase) {
+        console.error('Supabase client not initialized');
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+      
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching products:', error);
+        setProducts([]);
+      } else {
+        setProducts(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchProducts:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
   return (
     <main className="min-h-screen bg-white text-gray-900 px-4 py-12">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-10 text-center">
-          {selectedCategory
-            ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products`
-            : 'Shop All Products'}
+          {categoryParam ? `${categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1)} Styles` : 'Shop All Styles'}
         </h1>
         
         {loading ? (
@@ -292,7 +264,7 @@ export default function ClientStorePage() {
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-lg">
             <div className="mb-4">
-              <p>No products found for &quot;{selectedCategory}&quot;.</p>
+              <p>No products found for &quot;{categoryParam}&quot;.</p>
               <p className="text-sm mt-2">Available categories: {[...new Set(products.map(p => p.category))].join(', ')}</p>
             </div>
             <a href="/store/client" className="text-purple-600 hover:text-purple-800 underline">

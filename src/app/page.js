@@ -215,7 +215,7 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Linen Collection */}
-            <Link href="/store?category=linen" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
+            <Link href="/store/client?category=linen" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
               <Image
                 src="https://i.pinimg.com/1200x/d2/c9/40/d2c940f7904bdd9f1a0940c34f00ac62.jpg"
                 alt="Linen Collection"
@@ -232,7 +232,7 @@ export default function LandingPage() {
               </div>
             </Link>
             {/* Old Money 2025 */}
-            <Link href="/store?category=oldmoney" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
+            <Link href="/store/client?category=oldmoney" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
               <Image
                 src="https://i.pinimg.com/736x/3c/19/00/3c1900e596bb71c5935d086aac4ea5d4.jpg"
                 alt="Old Money 2025"
@@ -248,7 +248,7 @@ export default function LandingPage() {
               </div>
             </Link>
             {/* Streetwear Collection */}
-            <Link href="/store?category=streetwear" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
+            <Link href="/store/client?category=streetwear" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
               <Image
                 src="https://i.pinimg.com/736x/1c/3e/c6/1c3ec6b8b52f24ace677375d5f2c60b8.jpg"
                 alt="Streetwear Collection"
@@ -264,7 +264,7 @@ export default function LandingPage() {
               </div>
             </Link>
             {/* Shoes Collection */}
-            <Link href="/store?category=shoes" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
+            <Link href="/store/client?category=shoes" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
               <Image
                 src="https://i.pinimg.com/736x/27/69/34/2769346f88f52c75bfe17064b76d0b2f.jpg"
                 alt="Shoes Collection"
