@@ -53,11 +53,17 @@ export default function AdminDashboard() {
   const [editCategoryLoading, setEditCategoryLoading] = useState(false);
 
   useEffect(() => {
-    checkSession()
-    fetchProducts()
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [filterCategory]);
+
+  useEffect(() => {
     fetchCategories();
     fetchOrders();
-  }, [filterCategory])
+  }, []);
 
   const checkSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
