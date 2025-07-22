@@ -1,17 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Only create client if we have the required environment variables
-let supabase = null
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
-if (supabaseUrl && supabaseKey) {
-  try {
-    supabase = createClient(supabaseUrl, supabaseKey)
-  } catch (error) {
-    console.error('Failed to create Supabase client:', error)
-  }
+// Auth helpers
+export async function signUpWithEmail(email, password) {
+  return supabase.auth.signUp({ email, password });
 }
-
-export { supabase }
+export async function signInWithEmail(email, password) {
+  return supabase.auth.signInWithPassword({ email, password });
+}
+export async function signOut() {
+  return supabase.auth.signOut();
+}
+export function getCurrentUser() {
+  return supabase.auth.getUser();
+}

@@ -3,6 +3,9 @@ import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { HeartIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import OrderForm from '@/app/components/OrderForm';
 
 // Algeria wilayas and baladias
 const WILAYAS = [
@@ -73,8 +76,8 @@ export default function ClientStorePage() {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [categoryParam, setCategoryParam] = useState(null);
-
-  // Order form state
+  const [wishlist, setWishlist] = useState([]);
+  const [orderProduct, setOrderProduct] = useState(null);
   const [orderForm, setOrderForm] = useState({
     customerName: '',
     phone: '',
@@ -90,6 +93,21 @@ export default function ClientStorePage() {
     totalPrice: 0,
     notes: ''
   });
+
+  // Wishlist functions
+  const toggleWishlist = (productId) => {
+    setWishlist(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const isInWishlist = (productId) => {
+    return wishlist.includes(productId);
+  };
 
   function getCategoryFromURL() {
     if (typeof window !== 'undefined') {
@@ -219,6 +237,24 @@ export default function ClientStorePage() {
     setOrderLoading(false);
   };
 
+  const handleOrderSubmit = async (e) => {
+    e.preventDefault();
+    setOrderLoading(true);
+    await supabase.from('orders').insert({
+      customer_name: orderForm.name,
+      phone: orderForm.phone,
+      address: orderForm.address,
+      product_id: orderProduct.id,
+      product_name: orderProduct.name,
+      product_price: orderProduct.price,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    });
+    setOrderLoading(false);
+    setOrderModalOpen(false);
+    setOrderForm({ name: '', phone: '', address: '' });
+  };
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -254,9 +290,8 @@ export default function ClientStorePage() {
     <main className="min-h-screen bg-white text-gray-900 px-4 py-12">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-10 text-center">
-          {categoryParam ? `${categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1)} Styles` : 'Shop All Styles'}
+          {categoryParam ? `${categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1)} Products` : ''}
         </h1>
-        
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
@@ -264,18 +299,31 @@ export default function ClientStorePage() {
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-lg">
             <div className="mb-4">
-              <p>No products found for &quot;{categoryParam}&quot;.</p>
+              <p>No products found{categoryParam ? ` for "${categoryParam}"` : ''}.</p>
               <p className="text-sm mt-2">Available categories: {[...new Set(products.map(p => p.category))].join(', ')}</p>
             </div>
-            <a href="/store/client" className="text-purple-600 hover:text-purple-800 underline">
-              View all products
-            </a>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {filteredProducts.map((product) => (
               <div key={product.id} className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
                 <div className="relative w-full h-64 bg-gray-100 flex items-center justify-center">
+                  {/* Wishlist Heart Icon */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWishlist(product.id);
+                    }}
+                    className="absolute top-3 right-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md"
+                    aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  >
+                    {isInWishlist(product.id) ? (
+                      <HeartSolidIcon className="w-5 h-5 text-red-500" />
+                    ) : (
+                      <HeartIcon className="w-5 h-5 text-gray-600 hover:text-red-500" />
+                    )}
+                  </button>
+                  
                   {product.image_url ? (
                     <Image 
                       src={product.image_url} 
@@ -300,7 +348,7 @@ export default function ClientStorePage() {
                   <p className="text-gray-500 text-sm line-clamp-2 mb-2">{product.description}</p>
                   <button 
                     onClick={() => openOrderModal(product)}
-                    className="mt-auto w-full bg-black text-white py-2 rounded-lg font-semibold hover:bg-gray-800 transition"
+                    className="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"
                   >
                     Order Now
                   </button>
@@ -312,183 +360,7 @@ export default function ClientStorePage() {
       </div>
 
       {/* Order Modal */}
-      {orderModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Place Order</h2>
-                <button 
-                  onClick={() => setOrderModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmitOrder} className="space-y-4">
-                {/* Product Info */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-2">Product Details</h3>
-                  <p className="text-sm text-gray-600">{orderForm.productName}</p>
-                  <p className="text-lg font-bold">{orderForm.productPrice} DZD</p>
-                </div>
-
-                {/* Customer Info */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Full Name *</label>
-                    <input
-                      type="text"
-                      name="customerName"
-                      value={orderForm.customerName}
-                      onChange={handleOrderFormChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Phone Number *</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={orderForm.phone}
-                      onChange={handleOrderFormChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={orderForm.email}
-                      onChange={handleOrderFormChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Wilaya *</label>
-                    <select
-                      name="wilaya"
-                      value={orderForm.wilaya}
-                      onChange={handleOrderFormChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="">Select Wilaya</option>
-                      {WILAYAS.map((wilaya) => (
-                        <option key={wilaya.id} value={wilaya.name}>
-                          {wilaya.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Baladia *</label>
-                    <input
-                      type="text"
-                      name="baladia"
-                      value={orderForm.baladia}
-                      onChange={handleOrderFormChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Enter your city/commune"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Address *</label>
-                    <textarea
-                      name="address"
-                      value={orderForm.address}
-                      onChange={handleOrderFormChange}
-                      required
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Enter your full address"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Delivery Type *</label>
-                    <div className="space-y-2">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="deliveryType"
-                          value="agency"
-                          checked={orderForm.deliveryType === 'agency'}
-                          onChange={handleOrderFormChange}
-                          className="mr-2"
-                        />
-                        Agency Pickup (200 DZD)
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="deliveryType"
-                          value="home"
-                          checked={orderForm.deliveryType === 'home'}
-                          onChange={handleOrderFormChange}
-                          className="mr-2"
-                        />
-                        Home Delivery (400 DZD)
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Notes</label>
-                    <textarea
-                      name="notes"
-                      value={orderForm.notes}
-                      onChange={handleOrderFormChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Any additional notes..."
-                    />
-                  </div>
-
-                  {/* Order Summary */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Order Summary</h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span>Product Price:</span>
-                        <span>{orderForm.productPrice} DZD</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Delivery:</span>
-                        <span>{orderForm.deliveryPrice} DZD</span>
-                      </div>
-                      <div className="border-t pt-1 font-bold">
-                        <div className="flex justify-between">
-                          <span>Total:</span>
-                          <span>{orderForm.totalPrice} DZD</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={orderLoading}
-                    className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition disabled:opacity-50"
-                  >
-                    {orderLoading ? 'Placing Order...' : 'Place Order'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      <OrderForm product={orderProduct} open={orderModalOpen} onClose={() => setOrderModalOpen(false)} onOrderPlaced={() => {/* Optionally show a toast or refresh */}} />
     </main>
   );
 } 

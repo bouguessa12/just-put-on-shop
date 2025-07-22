@@ -3,10 +3,31 @@
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { HeartIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import { supabase } from '@/lib/supabaseClient.js';
+import { signUpWithEmail, signInWithEmail, signOut, getCurrentUser } from '@/lib/supabaseClient.js';
+import OrderForm from '@/app/components/OrderForm';
 
 const categories = [
-  { name: 'Streetwear', image: '/categories/streetwear.jpg', slug: 'streetwear' },
-  { name: 'Old Money', image: '/categories/oldmoney.jpg', slug: 'oldmoney' },
+  { 
+    name: 'Old Money', 
+    image: '/categories/oldmoney.jpg', 
+    slug: 'oldmoney',
+    subcategories: [
+      { name: 'Old Money T-Shirts', slug: 'old-money-tshirts' },
+      { name: 'Linen Pants', slug: 'linen-pants' }
+    ]
+  },
+  { 
+    name: 'Streetwear', 
+    image: '/categories/streetwear.jpg', 
+    slug: 'streetwear',
+    subcategories: [
+      { name: 'Baggy Jeans', slug: 'baggy-jeans' },
+      { name: 'Oversized T-Shirts', slug: 'oversized-tshirts' }
+    ]
+  },
   { name: 'Shoes', image: '/categories/shoes.jpg', slug: 'shoes' },
   { name: 'Accessories', image: '/categories/accessories.jpg', slug: 'accessories' },
 ];
@@ -21,11 +42,25 @@ const heroImages = [
 ];
 
 export default function LandingPage() {
+  const [hasMounted, setHasMounted] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Initialize wishlist as []
+  const [wishlist, setWishlist] = useState([]);
+  const [showWishlist, setShowWishlist] = useState(false);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const sliderRef = useRef(null);
+  const [loadingNewArrivals, setLoadingNewArrivals] = useState(true);
   const heroRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [authModal, setAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
 
   // Add swipe handlers for hero section
   const touchStartX = useRef(null);
@@ -54,6 +89,45 @@ export default function LandingPage() {
     touchEndX.current = null;
   };
 
+  // Wishlist functions
+  const updateWishlist = (newWishlist) => {
+    setWishlist(newWishlist);
+  };
+  const toggleWishlist = async (productId) => {
+    const idStr = String(productId);
+    if (user) {
+      if (wishlist.includes(idStr)) {
+        await supabase.from('wishlists').delete().eq('user_id', user.id).eq('product_id', idStr);
+        updateWishlist(wishlist.filter(id => id !== idStr));
+      } else {
+        await supabase.from('wishlists').upsert({ user_id: user.id, product_id: idStr });
+        updateWishlist([...wishlist, idStr]);
+      }
+    } else {
+      let updated;
+      if (wishlist.includes(idStr)) {
+        updated = wishlist.filter((id) => id !== idStr);
+      } else {
+        updated = [...wishlist, idStr];
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wishlist', JSON.stringify(updated));
+      }
+      updateWishlist(updated);
+    }
+  };
+  const isInWishlist = (productId) => wishlist.includes(String(productId));
+
+  // Fetch new arrival products
+  const fetchNewArrivals = async () => {
+    const { data, error } = await supabase.from('products').select('*').eq('is_new_arrival', true).order('created_at', { ascending: false });
+    setNewArrivals(data || []);
+  };
+
+  useEffect(() => {
+    fetchNewArrivals();
+  }, []);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setHeroIndex((prev) => (prev + 1) % heroImages.length);
@@ -73,6 +147,114 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const [collections, setCollections] = useState([]);
+  useEffect(() => {
+    async function fetchCollections() {
+      const { data, error } = await supabase.from('categories').select('*').is('parent_id', null).order('name', { ascending: true });
+      if (!error) setCollections(data || []);
+    }
+    fetchCollections();
+  }, []);
+
+  // Wishlist section logic
+  const [wishlistProducts, setWishlistProducts] = useState([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  useEffect(() => {
+    if (!hasMounted) return;
+    async function fetchWishlistProducts() {
+      setWishlistLoading(true);
+      if (!wishlist || wishlist.length === 0) {
+        setWishlistProducts([]);
+        setWishlistLoading(false);
+        return;
+      }
+      const { data, error } = await supabase.from('products').select('*').in('id', wishlist.map(String));
+      setWishlistProducts(data || []);
+      setWishlistLoading(false);
+    }
+    fetchWishlistProducts();
+  }, [wishlist, hasMounted]);
+
+  // Load wishlist from DB or localStorage
+  useEffect(() => {
+    if (!hasMounted) return;
+    async function fetchWishlist() {
+      if (user) {
+        // Fetch from DB
+        const { data, error } = await supabase.from('wishlists').select('product_id').eq('user_id', user.id);
+        const ids = (data || []).map(w => w.product_id);
+        setWishlist(ids.map(String));
+      } else {
+        // Fallback to localStorage
+        try {
+          setWishlist(JSON.parse(localStorage.getItem('wishlist') || '[]'));
+        } catch {
+          setWishlist([]);
+        }
+      }
+    }
+    fetchWishlist();
+  }, [user, hasMounted]);
+  // Merge localStorage wishlist into DB on login
+  useEffect(() => {
+    if (!user || !hasMounted) return;
+    const localWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    if (localWishlist.length === 0) return;
+    async function mergeWishlist() {
+      for (const productId of localWishlist) {
+        await supabase.from('wishlists').upsert({ user_id: user.id, product_id: productId });
+      }
+      localStorage.removeItem('wishlist');
+      // Refresh wishlist from DB
+      const { data } = await supabase.from('wishlists').select('product_id').eq('user_id', user.id);
+      setWishlist((data || []).map(w => w.product_id));
+    }
+    mergeWishlist();
+  }, [user, hasMounted]);
+
+  // Add hasMounted state
+  // Remove auto-login/session restore on page load
+  // Only set user after successful login
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    getCurrentUser().then(({ data }) => setUser(data?.user || null));
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+  }, []);
+
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [orderProduct, setOrderProduct] = useState(null);
+  const [orderForm, setOrderForm] = useState({ name: '', phone: '', address: '' });
+  const [orderLoading, setOrderLoading] = useState(false);
+  const openOrderModal = (product) => {
+    setOrderProduct(product);
+    setOrderModalOpen(true);
+  };
+  const handleOrderFormChange = (e) => {
+    setOrderForm({ ...orderForm, [e.target.name]: e.target.value });
+  };
+  const handleOrderSubmit = async (e) => {
+    e.preventDefault();
+    setOrderLoading(true);
+    await supabase.from('orders').insert({
+      customer_name: orderForm.name,
+      phone: orderForm.phone,
+      address: orderForm.address,
+      product_id: orderProduct.id,
+      product_name: orderProduct.name,
+      product_price: orderProduct.price,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    });
+    setOrderLoading(false);
+    setOrderModalOpen(false);
+    setOrderForm({ name: '', phone: '', address: '' });
+  };
+
   return (
     <main className="min-h-screen bg-white text-gray-900 font-sans overflow-x-hidden">
       {/* Navigation Bar */}
@@ -80,8 +262,8 @@ export default function LandingPage() {
         scrollY > 50 ? 'shadow-lg backdrop-blur-md bg-white/95' : ''
       }`}>
         <Link href="/" className="flex items-center gap-2 text-xl md:text-2xl font-bold tracking-tight">
-          <Image src="/logo.jpg" alt="Just Put On Logo" width={40} height={40} className="rounded-full" />
-          <span>Just Put On</span>
+          <Image src="/logo.jpg" alt="Shop Just Put On Logo" width={40} height={40} className="rounded-full" />
+          <span>Shop Just Put On</span>
         </Link>
         
         {/* Desktop Navigation */}
@@ -93,27 +275,40 @@ export default function LandingPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity z-30">
-              <ul className="py-2">
-                {categories.map((cat) => (
-                  <li key={cat.name}>
-                    <Link href={`/store/client?category=${cat.slug}`} className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
-                      {cat.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+            <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              {categories.map((category) => (
+                <Link
+                  key={category.slug}
+                  href={`/store/client/category/${category.slug}`}
+                  className="block px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                >
+                  {category.name}
+                </Link>
+              ))}
             </div>
           </div>
-                        <Link href="/store/client" className="hover:text-purple-600 transition">Shop</Link>
-          <Link href="mailto:contact@justputon.com" className="hover:text-purple-600 transition">Contact</Link>
-          <a href="https://instagram.com" target="_blank" rel="noopener" className="hover:text-purple-600 transition">Instagram</a>
+          <Link href="/store/client" className="hover:text-purple-600 transition">Shop</Link>
+          <Link href="#about" className="hover:text-purple-600 transition">About</Link>
+          <Link href="#contact" className="hover:text-purple-600 transition">Contact</Link>
+          
+          {/* Wishlist Icon */}
+          <button
+            onClick={() => setShowWishlist(!showWishlist)}
+            className="relative p-2 hover:text-purple-600 transition"
+          >
+            <HeartIcon className="w-6 h-6" />
+            {wishlist.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {wishlist.length}
+              </span>
+            )}
+          </button>
         </nav>
-
-        {/* Mobile Menu Button */}
-        <button 
-          className="md:hidden p-2"
+        
+        {/* Mobile menu button */}
+        <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -121,23 +316,71 @@ export default function LandingPage() {
         </button>
       </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMenuOpen(false)}>
-          <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-lg font-bold">Menu</span>
-              <button onClick={() => setIsMenuOpen(false)}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4">
+          <nav className="flex flex-col gap-4">
+            <Link href="/store/client" className="text-gray-700 hover:text-purple-600 transition">Shop</Link>
+            <Link href="#about" className="text-gray-700 hover:text-purple-600 transition">About</Link>
+            <Link href="#contact" className="text-gray-700 hover:text-purple-600 transition">Contact</Link>
+            <button
+              onClick={() => {
+                setShowWishlist(!showWishlist);
+                setIsMenuOpen(false);
+              }}
+              className="flex items-center gap-2 text-gray-700 hover:text-purple-600 transition"
+            >
+              <HeartIcon className="w-5 h-5" />
+              Wishlist ({wishlist.length})
+            </button>
+          </nav>
+        </div>
+      )}
+
+      {/* Wishlist Sidebar */}
+      {showWishlist && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+          <div className="bg-white w-full max-w-md h-full overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Wishlist</h2>
+                <button
+                  onClick={() => setShowWishlist(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <nav className="space-y-4">
-              <Link href="/store/client" className="block py-2 hover:text-purple-600 transition">Shop</Link>
-              <Link href="mailto:contact@justputon.com" className="block py-2 hover:text-purple-600 transition">Contact</Link>
-              <a href="https://instagram.com" target="_blank" rel="noopener" className="block py-2 hover:text-purple-600 transition">Instagram</a>
-            </nav>
+            <div className="p-6">
+              {wishlistLoading ? (
+                <div className="text-center py-8 text-gray-400">Loading wishlist...</div>
+              ) : wishlistProducts.length === 0 ? (
+                <div className="text-center py-8">
+                  <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Your wishlist is empty</p>
+                  <Link href="/store/client" className="text-purple-600 hover:text-purple-700 mt-2 inline-block">
+                    Start shopping
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {wishlistProducts.map(product => (
+                    <div key={product.id} className="flex items-center gap-4 bg-gray-50 rounded-xl p-4 shadow">
+                      <img src={product.image_url || '/placeholder.jpg'} alt={product.name} className="w-20 h-20 object-cover rounded-lg border" />
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg mb-1">{product.name}</h3>
+                        <p className="text-gray-500 text-sm mb-1">{product.description}</p>
+                        <span className="text-purple-600 font-bold">{product.price} DZD</span>
+                      </div>
+                      <a href={`/store/client?product=${product.id}`} className="text-purple-600 hover:underline font-semibold">View</a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -178,12 +421,12 @@ export default function LandingPage() {
               >
                 Shop Now
               </Link>
-              <Link 
+        <Link
                 href="#collections" 
                 className="inline-block px-8 py-4 rounded-full border-2 border-white text-white font-bold text-lg hover:bg-white hover:text-black transition-all duration-300"
-              >
+        >
                 New Collection
-              </Link>
+        </Link>
             </div>
           </div>
         </div>
@@ -202,6 +445,93 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* New Arrivals Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight bg-gradient-to-r from-gray-900 to-purple-600 bg-clip-text text-transparent">
+              New Arrivals
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Fresh from our latest collection. Be the first to discover these exclusive pieces.
+            </p>
+          </div>
+          {newArrivals.length === 0 ? (
+            <div className="text-center text-gray-400 py-16">No new arrivals yet.</div>
+          ) : (
+            <div className="relative max-w-5xl mx-auto">
+              <div className="overflow-hidden rounded-2xl shadow-xl">
+                <div
+                  ref={sliderRef}
+                  className="flex transition-transform duration-700"
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                >
+                  {newArrivals.map((product, idx) => (
+                    <div key={product.id} className="min-w-full flex flex-col md:flex-row bg-white" style={{ minHeight: '420px' }}>
+                      <div className="flex-1 flex items-center justify-center p-4 md:p-12">
+                        <img
+                          src={product.image_url || '/placeholder.jpg'}
+                          alt={product.name}
+                          className="w-full max-w-xs md:max-w-lg h-[260px] md:h-[400px] object-cover rounded-3xl shadow-2xl border-2 border-gray-200"
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center p-4 md:p-12">
+                        <h3 className="text-2xl md:text-4xl font-extrabold mb-2 md:mb-4 text-gray-900 drop-shadow font-serif">{product.name}</h3>
+                        <p className="text-base md:text-lg text-gray-500 mb-3 md:mb-6 font-light">{product.description}</p>
+                        <div className="flex gap-2 md:gap-4 mb-3 md:mb-6">
+                          <span className="text-purple-700 font-extrabold text-xl md:text-3xl">{product.price} DZD</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
+                          <a href={`/store/client?product=${product.id}`} className="px-5 md:px-7 py-2 md:py-3 rounded-full bg-purple-600 text-white font-bold text-base md:text-lg hover:bg-purple-700 transition">Explore</a>
+                          <button
+                            className={`px-5 md:px-7 py-2 md:py-3 rounded-full font-bold text-base md:text-lg transition ${isInWishlist(product.id) ? 'bg-purple-100 text-purple-700 border border-purple-600' : 'bg-gray-200 text-purple-700 hover:bg-gray-300'}`}
+                            onClick={() => toggleWishlist(product.id)}
+                            aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                          >
+                            {isInWishlist(product.id) ? <HeartSolidIcon className="w-5 h-5 inline mr-2 text-red-500" /> : <HeartIcon className="w-5 h-5 inline mr-2 text-gray-600" />} {isInWishlist(product.id) ? 'In Wishlist' : 'Add to Wishlist'}
+                          </button>
+                          <button
+                            className="px-5 md:px-7 py-2 md:py-3 rounded-full bg-green-600 text-white font-bold text-base md:text-lg hover:bg-green-700 transition"
+                            onClick={() => openOrderModal(product)}
+                          >
+                            Order Now
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Arrows */}
+              <button
+                onClick={() => setCurrentSlide((prev) => (prev - 1 + newArrivals.length) % newArrivals.length)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-purple-600 rounded-full shadow p-2 z-10"
+                style={{ display: newArrivals.length > 1 ? 'block' : 'none' }}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button
+                onClick={() => setCurrentSlide((prev) => (prev + 1) % newArrivals.length)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-purple-600 rounded-full shadow p-2 z-10"
+                style={{ display: newArrivals.length > 1 ? 'block' : 'none' }}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </button>
+              {/* Dots */}
+              <div className="flex justify-center gap-2 mt-6">
+                {newArrivals.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`w-3 h-3 rounded-full ${idx === currentSlide ? 'bg-purple-600' : 'bg-gray-300'}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Discover Our Collections Section */}
       <section id="collections" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
@@ -214,128 +544,30 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Linen Collection */}
-            <Link href="/store/client?category=linen" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
-              <Image
-                src="https://i.pinimg.com/1200x/d2/c9/40/d2c940f7904bdd9f1a0940c34f00ac62.jpg"
-                alt="Linen Collection"
-                width={800}
-                height={600}
-                className="w-full h-96 object-cover object-top"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-8">
-                <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg font-serif">
-                  Linen Collection
-                </span>
-              </div>
-            </Link>
-            {/* Old Money 2025 */}
-            <Link href="/store/client?category=oldmoney" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
-              <Image
-                src="https://i.pinimg.com/736x/3c/19/00/3c1900e596bb71c5935d086aac4ea5d4.jpg"
-                alt="Old Money 2025"
-                width={800}
-                height={600}
-                className="w-full h-96 object-cover object-top"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-8">
-                <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg font-serif">
-                  Old Money 2025
-                </span>
-              </div>
-            </Link>
-            {/* Streetwear Collection */}
-            <Link href="/store/client?category=streetwear" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
-              <Image
-                src="https://i.pinimg.com/736x/1c/3e/c6/1c3ec6b8b52f24ace677375d5f2c60b8.jpg"
-                alt="Streetwear Collection"
-                width={800}
-                height={600}
-                className="w-full h-96 object-cover object-top"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-8">
-                <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg font-serif">
-                  Streetwear Collection
-                </span>
-              </div>
-            </Link>
-            {/* Shoes Collection */}
-            <Link href="/store/client?category=shoes" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
-              <Image
-                src="https://i.pinimg.com/736x/27/69/34/2769346f88f52c75bfe17064b76d0b2f.jpg"
-                alt="Shoes Collection"
-                width={800}
-                height={600}
-                className="w-full h-96 object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-8">
-                <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg font-serif">
-                  Shoes Collection
-                </span>
-              </div>
-            </Link>
-            {/* Accessories Collection */}
-            <Link href="/store/client?category=accessories" className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
-              <Image
-                src="https://i.pinimg.com/736x/31/5b/8e/315b8e7d4e6e5a49879455a6786902c5.jpg"
-                alt="Accessories Collection"
-                width={800}
-                height={600}
-                className="w-full h-96 object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-8">
-                <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg font-serif">
-                  Accessories Collection
-                </span>
-              </div>
-            </Link>
+            {collections.map((cat) => (
+              <Link key={cat.id} href={`/store/client/category/${cat.slug}`} className="relative group rounded-3xl overflow-hidden shadow-xl bg-gray-900 block focus:outline-none focus:ring-4 focus:ring-purple-300 transition-transform duration-200 hover:scale-105">
+                <Image
+                  src={cat.image_url || '/placeholder.jpg'}
+                  alt={cat.name}
+                  width={800}
+                  height={600}
+                  className="w-full h-96 object-cover object-top"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
+                <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-8">
+                  <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg font-serif">
+                    {cat.name}
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Featured Categories with Modern Grid */}
-      <section className="max-w-7xl mx-auto py-20 px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 font-serif">Premium Categories</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto font-light">
-            Exclusively designed for the discerning gentleman
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.map((cat, index) => (
-            <Link 
-              key={cat.name} 
-              href={`/store/client?category=${cat.slug}`} 
-              className="group block rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="relative h-64 w-full overflow-hidden">
-                <Image
-                  src={cat.image}
-                  alt={cat.name}
-                  fill
-                  className="object-cover object-center group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-              <div className="p-6 text-center">
-                <h3 className="text-xl font-bold mb-2 group-hover:text-purple-600 transition-colors font-serif">{cat.name}</h3>
-                <p className="text-gray-600 text-sm font-light">Premium men&apos;s essentials</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* About/Brand Section with Modern Design */}
-      <section className="py-20 bg-gradient-to-br from-gray-900 to-black text-white">
+      <section id="about" className="py-20 bg-gradient-to-br from-gray-900 to-black text-white">
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
@@ -390,7 +622,7 @@ export default function LandingPage() {
       </section>
 
       {/* Newsletter Section */}
-      <section className="py-16 bg-gradient-to-r from-purple-600 to-indigo-700 text-white">
+      <section id="contact" className="py-16 bg-gradient-to-r from-purple-600 to-indigo-700 text-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Stay Updated</h2>
           <p className="text-xl mb-8 text-purple-100">
@@ -415,7 +647,7 @@ export default function LandingPage() {
           <div className="mb-8">
             <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold text-gray-900">
               <Image src="/logo.jpg" alt="Logo" width={40} height={40} className="rounded-full" />
-              Just Put On
+              Shop Just Put On
             </Link>
           </div>
           
@@ -470,10 +702,67 @@ export default function LandingPage() {
           </div>
           
           <div className="border-t border-gray-200 pt-8">
-            <div className="text-sm">&copy; {new Date().getFullYear()} Just Put On. All rights reserved.</div>
+            <div className="text-sm">&copy; {new Date().getFullYear()} Shop Just Put On. All rights reserved.</div>
           </div>
         </div>
       </footer>
+
+      {/* User menu floating button */}
+      <div className="fixed bottom-4 right-4 z-50">
+        {user ? (
+          <div className="flex flex-col items-end gap-2">
+            <button onClick={async () => { await signOut(); setUser(null); }} className="bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-red-700">Logout</button>
+            <span className="bg-white text-gray-700 font-semibold rounded-full shadow px-4 py-2 mt-1">{user.email}</span>
+          </div>
+        ) : (
+          <button onClick={() => { setAuthModal(true); setAuthMode('login'); }} className="bg-purple-600 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-purple-700">Login / Signup</button>
+        )}
+      </div>
+
+      {/* Auth modal UI: */}
+      {authModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-sm">
+            <h2 className="text-2xl font-bold mb-4 text-center">{authMode === 'login' ? 'Login' : 'Sign Up'}</h2>
+            {authError && <div className="text-red-600 mb-2 text-center">{authError}</div>}
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setAuthError('');
+              if (authMode === 'login') {
+                const { data, error } = await signInWithEmail(authEmail, authPassword);
+                if (error) setAuthError(error.message);
+                else {
+                  setUser(data.user);
+                  setAuthModal(false);
+                }
+              } else {
+                const { error } = await signUpWithEmail(authEmail, authPassword);
+                if (error) setAuthError(error.message);
+                else {
+                  setAuthError('Signup successful! Please log in.');
+                  setAuthMode('login');
+                }
+              }
+            }} className="space-y-4">
+              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="Email" className="w-full border rounded px-3 py-2" required />
+              <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Password" className="w-full border rounded px-3 py-2" required />
+              <button type="submit" className="w-full bg-purple-600 text-white py-2 rounded font-bold hover:bg-purple-700">{authMode === 'login' ? 'Login' : 'Sign Up'}</button>
+            </form>
+            <div className="text-center mt-4">
+              {authMode === 'login' ? (
+                <span>Don't have an account? <button onClick={() => setAuthMode('signup')} className="text-purple-600 hover:underline">Sign Up</button></span>
+              ) : (
+                <span>Already have an account? <button onClick={() => setAuthMode('login')} className="text-purple-600 hover:underline">Login</button></span>
+              )}
+            </div>
+            <button onClick={() => setAuthModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-black"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+          </div>
+        </div>
+      )}
+
+      {orderModalOpen && orderProduct && (
+        <OrderForm product={orderProduct} open={orderModalOpen} onClose={() => setOrderModalOpen(false)} onOrderPlaced={() => {/* Optionally show a toast or refresh */}} />
+      )}
     </main>
   );
 }

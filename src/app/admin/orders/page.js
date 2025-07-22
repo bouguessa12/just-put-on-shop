@@ -32,7 +32,7 @@ export default function AdminOrders() {
       <header className="bg-white shadow px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Image src="/logo.jpg" alt="Logo" width={40} height={40} />
-          <h1 className="text-xl font-semibold">Just Put On Shop</h1>
+          <h1 className="text-xl font-semibold">Shop Just Put On</h1>
         </div>
         <nav className="flex gap-6">
           <Link href="/admin" className="hover:underline">🏠 Home</Link>

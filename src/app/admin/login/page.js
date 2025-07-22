@@ -12,15 +12,19 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    checkSession()
-  }, [])
-
-  const checkSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      window.location.href = '/admin/dashboard'
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          router.replace('/admin/dashboard')
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+      }
     }
-  }
+
+    checkAuth()
+  }, [router])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -33,25 +37,21 @@ export default function AdminLogin() {
         password: password,
       })
 
-      console.log('Login response:', JSON.stringify({ data, error }, null, 2))
-
       if (error) {
         setError(error.message)
-      } else {
-        // Always check for session after login
-        const { data: sessionData } = await supabase.auth.getSession()
-        console.log('Session after login:', JSON.stringify(sessionData, null, 2))
+        setLoading(false)
+        return
+      }
 
-        if (sessionData.session) {
-          window.location.href = '/admin/dashboard'
-        } else {
-          setError('Login failed. Please try again.')
-        }
+      if (data?.user) {
+        router.replace('/admin/dashboard')
+      } else {
+        setError('Login failed. Please try again.')
+        setLoading(false)
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
       console.error('Login error:', error)
-    } finally {
       setLoading(false)
     }
   }

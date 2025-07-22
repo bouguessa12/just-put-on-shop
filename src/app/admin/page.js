@@ -50,7 +50,7 @@ export default function AdminLogin() {
             Login
           </button>
         </form>
-      </div>
-    </main>
+        </div>
+      </main>
   );
 }

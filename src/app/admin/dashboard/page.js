@@ -7,8 +7,9 @@ import { Dialog } from '@headlessui/react'
 import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, HomeIcon, ShoppingBagIcon, UserCircleIcon, CogIcon, ShoppingCartIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid'
 
 const CLOTHING_SIZES = ['S', 'M', 'L', 'XL']
-const SHOE_SIZES = Array.from({ length: 11 }, (_, i) => (35 + i).toString())
-const COLORS = ['Black', 'White', 'Red', 'Green', 'Blue', 'Beige']
+const TSHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+const SHOE_SIZES = Array.from({ length: 11 }, (_, i) => (35 + i).toString());
+const PANT_SIZES = Array.from({ length: 11 }, (_, i) => (30 + i).toString());
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -25,6 +26,7 @@ export default function AdminDashboard() {
   const [logoError, setLogoError] = useState(false)
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const [form, setForm] = useState({
     name: '',
@@ -33,9 +35,11 @@ export default function AdminDashboard() {
     image_url: '',
     image_file: null,
     category: '',
+    subcategory: '',
     in_stock: true,
     sizes: CLOTHING_SIZES.map((size) => ({ size, quantity: 0 })),
-    colors: COLORS.map((color) => ({ color, quantity: 0, image_file: null, image_url: '' }))
+    colors: [], // Initialize colors as an empty array
+    is_new_arrival: false,
   })
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
@@ -132,11 +136,17 @@ export default function AdminDashboard() {
     const updatedForm = { ...form, [name]: type === 'checkbox' ? checked : value }
 
     if (name === 'category') {
-      const categoryValue = value.toLowerCase()
-      const sizes = categoryValue.includes('shoe') || categoryValue.includes('basket')
-        ? SHOE_SIZES.map((size) => ({ size, quantity: 0 }))
-        : CLOTHING_SIZES.map((size) => ({ size, quantity: 0 }))
-      updatedForm.sizes = sizes
+      const categoryValue = value.toLowerCase();
+      let sizes;
+      if (categoryValue.includes('shoe')) {
+        sizes = SHOE_SIZES.map((size) => ({ size, quantity: 0 }));
+      } else if (categoryValue.includes('pant')) {
+        sizes = PANT_SIZES.map((size) => ({ size, quantity: 0 }));
+      } else {
+        sizes = TSHIRT_SIZES.map((size) => ({ size, quantity: 0 }));
+      }
+      updatedForm.sizes = sizes;
+      updatedForm.subcategory = '';
     }
 
     setForm(updatedForm)
@@ -163,8 +173,17 @@ export default function AdminDashboard() {
       setForm({
         ...product,
         image_file: null,
-        sizes: product.sizes || CLOTHING_SIZES.map((size) => ({ size, quantity: 0 })),
-        colors: product.colors || COLORS.map((color) => ({ color, quantity: 0, image_file: null, image_url: '' }))
+        sizes: Array.isArray(product.sizes)
+          ? product.sizes
+          : typeof product.sizes === 'string'
+            ? JSON.parse(product.sizes)
+            : CLOTHING_SIZES.map((size) => ({ size, quantity: 0 })),
+        colors: Array.isArray(product.colors)
+          ? product.colors
+          : typeof product.colors === 'string'
+            ? JSON.parse(product.colors)
+            : [], // Ensure colors is an array
+        is_new_arrival: product.is_new_arrival || false,
       })
       setEditingProduct(product)
     } else {
@@ -175,9 +194,11 @@ export default function AdminDashboard() {
         image_url: '',
         image_file: null,
         category: filterCategory || '',
+        subcategory: '',
         in_stock: true,
         sizes: CLOTHING_SIZES.map((size) => ({ size, quantity: 0 })),
-        colors: COLORS.map((color) => ({ color, quantity: 0, image_file: null, image_url: '' }))
+        colors: [], // Initialize colors as an empty array
+        is_new_arrival: false,
       })
       setEditingProduct(null)
     }
@@ -185,78 +206,56 @@ export default function AdminDashboard() {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    let uploadedUrl = form.image_url
-
-    if (form.image_file) {
-      const fileName = `${Date.now()}-${form.image_file.name}`
-      const { data, error: uploadError } = await supabase.storage
-        .from('product-image')
-        .upload(`products/${fileName}`, form.image_file)
-
-      if (uploadError) {
-        alert('Image upload failed')
-        return
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('product-image')
-        .getPublicUrl(`products/${fileName}`)
-
-      uploadedUrl = publicUrlData.publicUrl
+    e.preventDefault();
+    if (!form.name.trim() || !form.description.trim() || !form.price || !form.category) {
+      setToast({ message: 'All required fields must be filled', type: 'error' }); return;
     }
-
+    setLoading(true);
+    let uploadedUrl = form.image_url;
+    if (form.image_file) {
+      const fileName = `${Date.now()}-${sanitizeFileName(form.image_file.name)}`;
+      const { error: uploadError } = await supabase.storage.from('product-image').upload(`products/${fileName}`, form.image_file);
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('product-image').getPublicUrl(`products/${fileName}`);
+        uploadedUrl = publicUrlData.publicUrl;
+      }
+    }
     const colorUploadPromises = form.colors.map(async (c, i) => {
       if (c.image_file) {
-        const colorFileName = `${Date.now()}-${c.color}-${c.image_file.name}`
-        const { data, error: colorUploadError } = await supabase.storage
-          .from('product-image')
-          .upload(`colors/${colorFileName}`, c.image_file)
-
-        if (colorUploadError) {
-          console.error(`Color image upload failed for ${c.color}`)
-          return { ...c, image_url: '' }
+        const colorFileName = `${Date.now()}-${sanitizeFileName(c.color)}-${sanitizeFileName(c.image_file.name)}`;
+        const { error: colorUploadError } = await supabase.storage.from('product-image').upload(`colors/${colorFileName}`, c.image_file);
+        if (!colorUploadError) {
+          const { data: publicColorUrl } = supabase.storage.from('product-image').getPublicUrl(`colors/${colorFileName}`);
+          return { ...c, image_url: publicColorUrl.publicUrl, image_file: undefined };
         }
-
-        const { data: publicColorUrl } = supabase.storage
-          .from('product-image')
-          .getPublicUrl(`colors/${colorFileName}`)
-
-        return { ...c, image_url: publicColorUrl.publicUrl, image_file: undefined }
+        return { ...c, image_url: '', image_file: undefined };
       }
-      return c
-    })
-
-    const colorsWithUrls = await Promise.all(colorUploadPromises)
-
+      return c;
+    });
+    const colorsWithUrls = await Promise.all(colorUploadPromises);
     const dataToSend = {
       name: form.name,
       description: form.description,
       price: parseFloat(form.price) || 0,
       image_url: uploadedUrl,
       category: form.category,
-      in_stock: form.in_stock,
-      sizes: form.sizes,
-      colors: colorsWithUrls
-    }
-
-    let result
+      subcategory: form.subcategory,
+      in_stock: !!form.in_stock,
+      sizes: JSON.stringify(form.sizes),
+      colors: JSON.stringify(colorsWithUrls),
+      is_new_arrival: !!form.is_new_arrival,
+    };
+    console.log('Data being sent:', dataToSend);
+    let result;
     if (editingProduct) {
-      result = await supabase.from('products').update(dataToSend).eq('id', editingProduct.id)
+      result = await supabase.from('products').update(dataToSend).eq('id', editingProduct.id);
     } else {
-      result = await supabase.from('products').insert([dataToSend])
+      result = await supabase.from('products').insert([dataToSend]);
     }
-
-    const { error } = result
-    if (error) {
-      console.error('Insert error:', error)
-      alert('Failed to save product')
-      return
-    }
-
-    setModalOpen(false)
-    fetchProducts()
+    const { error } = result;
+    if (error) { setToast({ message: 'Failed to save product', type: 'error' }); setLoading(false); return; }
+    setToast({ message: editingProduct ? 'Product updated!' : 'Product added!', type: 'success' });
+    setModalOpen(false); fetchProducts(); setLoading(false);
   }
 
   const handleDelete = async (id) => {
@@ -266,48 +265,58 @@ export default function AdminDashboard() {
     }
   }
 
+  // Helper functions for collections and subcategories
+  const getCollections = () => categories.filter(cat => !cat.parent_id);
+  const getSubcategories = (parentId) => categories.filter(cat => cat.parent_id === parentId);
+
+  // Add a slugify function
+  function slugify(str) {
+    return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  }
+
+  // Update handleAddCategory to support collections and subcategories
   const handleAddCategory = async (e) => {
     e.preventDefault();
+    const parentId = window._parentId || null;
+    window._parentId = null;
+    if (!newCategoryName.trim()) { setToast({ message: 'Name is required', type: 'error' }); return; }
+    const slug = slugify(newCategoryName.trim());
+    if (categories.some(cat => cat.slug === slug && cat.parent_id === parentId)) {
+      setToast({ message: 'Duplicate slug under same parent', type: 'error' }); return;
+    }
     setCategoryLoading(true);
     let imageUrl = '';
     if (newCategoryImage) {
-      const fileName = `${Date.now()}-${newCategoryImage.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('category-images')
-        .upload(`categories/${fileName}`, newCategoryImage);
-      console.log('Image upload:', uploadData, uploadError);
-      if (uploadError) {
-        alert('Image upload failed');
-        setCategoryLoading(false);
-        return;
+      const fileName = `${Date.now()}-${sanitizeFileName(newCategoryImage.name)}`;
+      const { error: uploadError } = await supabase.storage.from('category-images').upload(`categories/${fileName}`, newCategoryImage);
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('category-images').getPublicUrl(`categories/${fileName}`);
+        imageUrl = publicUrlData.publicUrl;
       }
-      const { data: publicUrlData } = supabase.storage
-        .from('category-images')
-        .getPublicUrl(`categories/${fileName}`);
-      imageUrl = publicUrlData.publicUrl;
     }
-    const slug = newCategoryName.trim().toLowerCase().replace(/\s+/g, '-');
-    const { error } = await supabase.from('categories').insert([{ name: newCategoryName.trim().toLowerCase(), slug, image_url: imageUrl }]);
-    console.log('Insert category error:', error);
-    if (error) {
-      alert('Failed to add category');
-    } else {
-      setNewCategoryName('');
-      setNewCategoryImage(null);
-      setNewCategoryImageUrl('');
-      setCategoryModalOpen(false);
-      fetchCategories();
+    const { error } = await supabase.from('categories').insert([{ name: newCategoryName.trim(), slug, image_url: imageUrl, parent_id: parentId }]);
+    if (error) { setToast({ message: 'Failed to add category', type: 'error' }); } else {
+      setToast({ message: 'Category added!', type: 'success' });
+      setNewCategoryName(''); setNewCategoryImage(null); setNewCategoryImageUrl(''); setCategoryModalOpen(false); fetchCategories();
     }
     setCategoryLoading(false);
   };
 
+  // Update handleDeleteCategory to delete subcategories and products
   const handleDeleteCategory = async (categoryToDelete) => {
-    if (!window.confirm(`WARNING: Deleting the category "${categoryToDelete.name}" will also permanently delete ALL products in this category. This action cannot be undone.\n\nAre you sure you want to proceed?`)) return;
+    if (!window.confirm(`WARNING: Deleting the category "${categoryToDelete.name}" will also permanently delete ALL subcategories and products in this category. This action cannot be undone.\n\nAre you sure you want to proceed?`)) return;
+    // Delete all subcategories
+    const subcats = getSubcategories(categoryToDelete.id);
+    for (const subcat of subcats) {
+      await supabase.from('products').delete().eq('subcategory', subcat.name);
+      await supabase.from('categories').delete().eq('id', subcat.id);
+    }
     // Delete all products in this category
     await supabase.from('products').delete().eq('category', categoryToDelete.name);
     // Delete the category
     await supabase.from('categories').delete().eq('id', categoryToDelete.id);
     setCategories(categories.filter((cat) => cat.id !== categoryToDelete.id));
+    fetchCategories();
   };
 
   const handlePreview = (product) => {
@@ -342,7 +351,7 @@ export default function AdminDashboard() {
     setEditCategoryLoading(true);
     let imageUrl = editCategory.image_url || '';
     if (editCategoryImage) {
-      const fileName = `${Date.now()}-${editCategoryImage.name}`;
+      const fileName = `${Date.now()}-${sanitizeFileName(editCategoryImage.name)}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('category-images')
         .upload(`categories/${fileName}`, editCategoryImage);
@@ -356,7 +365,10 @@ export default function AdminDashboard() {
         .getPublicUrl(`categories/${fileName}`);
       imageUrl = publicUrlData.publicUrl;
     }
-    const slug = editCategoryName.trim().toLowerCase().replace(/\s+/g, '-');
+    const slug = slugify(editCategoryName.trim());
+    if (categories.some(cat => cat.slug === slug && cat.parent_id === editCategory.parent_id && cat.id !== editCategory.id)) {
+      setToast({ message: 'Duplicate slug under same parent', type: 'error' }); setEditCategoryLoading(false); return;
+    }
     const { error } = await supabase.from('categories').update({
       name: editCategoryName.trim().toLowerCase(),
       slug,
@@ -374,6 +386,20 @@ export default function AdminDashboard() {
     }
     setEditCategoryLoading(false);
   };
+
+  function Toast({ message, type, onClose }) {
+    useEffect(() => { if (!message) return; const t = setTimeout(onClose, 2500); return () => clearTimeout(t); }, [message, onClose]);
+    if (!message) return null;
+    return <div className={`fixed top-6 right-6 z-50 px-6 py-3 rounded shadow-lg text-white font-bold transition-all ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>{message}</div>;
+  }
+
+  // Add a sanitizeFileName function
+  function sanitizeFileName(name) {
+    return name
+      .replace(/[^a-zA-Z0-9.\-_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-gray-100 overflow-x-hidden">
@@ -477,6 +503,14 @@ export default function AdminDashboard() {
             </li>
           </ul>
         </nav>
+        <div className="absolute bottom-0 left-0 w-full p-4">
+          <button
+            onClick={handleLogout}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 text-lg"
+          >
+            <ArrowRightOnRectangleIcon className="w-6 h-6" /> Logout
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -692,7 +726,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {categories.filter(cat => !!cat.name).map((cat) => (
+                  {getCollections().map((cat) => (
                     <div 
                       key={cat.id} 
                       className={`relative group rounded-xl overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-[1.03]`}
@@ -729,6 +763,39 @@ export default function AdminDashboard() {
                           <XMarkIcon className="w-4 h-4" />
                         </button>
                       </div>
+                      {/* Subcategories UI */}
+                      <div className="mt-2 p-2 bg-gray-900 rounded">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-semibold text-gray-300 text-xs">Subcategories</span>
+                          <button
+                            onClick={() => {
+                              setCategoryModalOpen(true);
+                              setNewCategoryName('');
+                              setNewCategoryImage(null);
+                              setNewCategoryImageUrl('');
+                              setCategoryLoading(false);
+                              window._parentId = cat.id;
+                            }}
+                            className="text-xs bg-green-700 hover:bg-green-800 text-white px-2 py-1 rounded"
+                          >
+                            + Add Subcategory
+                          </button>
+                        </div>
+                        <ul className="space-y-1">
+                          {getSubcategories(cat.id).map(subcat => (
+                            <li key={subcat.id} className="flex justify-between items-center bg-gray-700 px-3 py-1 rounded">
+                              <span>{subcat.name}</span>
+                              <div className="flex gap-1">
+                                <button onClick={() => openEditCategoryModal(subcat)} className="text-blue-400 hover:text-blue-300"><PencilIcon className="w-4 h-4" /></button>
+                                <button onClick={() => handleDeleteCategory(subcat)} className="text-red-400 hover:text-red-300"><XMarkIcon className="w-4 h-4" /></button>
+                              </div>
+                            </li>
+                          ))}
+                          {getSubcategories(cat.id).length === 0 && (
+                            <li className="text-xs text-gray-500 text-center py-1">No subcategories yet</li>
+                          )}
+                        </ul>
+                      </div>
                     </div>
                   ))}
                   <button
@@ -757,7 +824,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto items-stretch md:items-center">
                     {/* Category Dropdown */}
                     <select
-                      value={filterCategory}
+                      value={filterCategory || ""}
                       onChange={e => setFilterCategory(e.target.value)}
                       className="bg-gray-700 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2 md:mb-0"
                     >
@@ -820,7 +887,7 @@ export default function AdminDashboard() {
                               <span className="text-gray-500">No image</span>
                             </div>
                           )}
-                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute top-2 right-2 flex gap-1 opacity-100 transition-opacity z-20">
                             <button 
                               onClick={(e) => { e.stopPropagation(); openModal(product) }} 
                               className="bg-gray-800 hover:bg-blue-600 p-1 rounded"
@@ -945,7 +1012,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium mb-2">Category *</label>
                   <select
                     name="category"
-                    value={form.category}
+                    value={form.category || ""}
                     onChange={handleInputChange}
                     required
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -954,6 +1021,27 @@ export default function AdminDashboard() {
                     {categories.filter(cat => !!cat.name).map((cat) => (
                       <option key={cat.id} value={cat.name}>{cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}</option>
                     ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Subcategory</label>
+                  <select
+                    name="subcategory"
+                    value={form.subcategory || ""}
+                    onChange={handleInputChange}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    disabled={!form.category}
+                  >
+                    <option value="">No Subcategory</option>
+                    {categories
+                      .filter(cat => {
+                        const parent = categories.find(parentCat => parentCat.name === form.category && !parentCat.parent_id);
+                        return parent && cat.parent_id === parent.id;
+                      })
+                      .map(subcat => (
+                        <option key={subcat.id} value={subcat.name}>{subcat.name}</option>
+                      ))}
                   </select>
                 </div>
 
@@ -969,6 +1057,18 @@ export default function AdminDashboard() {
                     />
                     <label className="ml-3">In Stock</label>
                   </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.is_new_arrival || false}
+                      onChange={e => setForm({ ...form, is_new_arrival: e.target.checked })}
+                      className="h-5 w-5 text-purple-500 rounded border-gray-600 bg-gray-700 focus:ring-purple-500"
+                    />
+                    <span>Mark as New Arrival</span>
+                  </label>
                 </div>
 
                 <div className="md:col-span-2">
@@ -997,7 +1097,7 @@ export default function AdminDashboard() {
                   <span className="text-xs bg-gray-700 px-2 py-1 rounded-full">{form.sizes.length} sizes</span>
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {form.sizes.map((size, index) => (
+                  {Array.isArray(form.sizes) ? form.sizes.map((size, index) => (
                     <div key={size.size} className="bg-gray-700 p-4 rounded-lg">
                       <label className="block text-sm font-medium mb-2">Size {size.size}</label>
                       <input
@@ -1008,7 +1108,7 @@ export default function AdminDashboard() {
                         className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                       />
                     </div>
-                  ))}
+                  )) : null}
                 </div>
               </div>
 
@@ -1016,40 +1116,32 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                   <span>Colors</span>
                   <span className="text-xs bg-gray-700 px-2 py-1 rounded-full">{form.colors.length} colors</span>
+                  <button type="button" onClick={() => setForm({ ...form, colors: [...form.colors, { color: '', quantity: 0, image_file: null, image_url: '' }] })} className="ml-2 px-2 py-1 bg-green-700 hover:bg-green-800 rounded text-xs">+ Add Color</button>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {form.colors.map((color, index) => (
-                    <div key={color.color} className="bg-gray-700 p-4 rounded-lg">
-                      <h4 className="font-medium mb-3">{color.color}</h4>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm mb-2">Quantity</label>
-                          <input
-                            type="number"
-                            value={color.quantity}
-                            onChange={(e) => handleColorChange(index, 'quantity', e.target.value)}
-                            min="0"
-                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm mb-2">Color Image</label>
-                          {color.image_url ? (
-                            <div className="mb-2">
-                              <img src={color.image_url} alt={`${color.color} variant`} className="h-24 object-contain rounded-lg bg-gray-900" />
-                            </div>
-                          ) : (
-                            <div className="bg-gray-800 border-2 border-dashed border-gray-700 rounded-lg w-full h-24 flex items-center justify-center mb-2 bg-gray-900">
-                              <span className="text-gray-500 text-sm">No image</span>
-                            </div>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleColorChange(index, 'image_file', e.target.files[0])}
-                            className="w-full text-xs text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-white hover:file:bg-gray-500"
-                          />
-                        </div>
+                    <div key={index} className="bg-gray-700 p-4 rounded-lg relative">
+                      <button type="button" onClick={() => setForm({ ...form, colors: form.colors.filter((_, i) => i !== index) })} className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-xs">Remove</button>
+                      <div className="mb-2">
+                        <label className="block text-sm mb-1">Color Name</label>
+                        <input type="text" value={color.color} onChange={e => {
+                          const updated = [...form.colors];
+                          updated[index].color = e.target.value;
+                          setForm({ ...form, colors: updated });
+                        }} className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">Quantity</label>
+                        <input type="number" value={color.quantity} onChange={e => handleColorChange(index, 'quantity', e.target.value)} min="0" className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">Color Image</label>
+                        {color.image_url ? (
+                          <div className="mb-2"><img src={color.image_url} alt={`${color.color} variant`} className="h-24 object-contain rounded-lg bg-gray-900" /></div>
+                        ) : (
+                          <div className="bg-gray-800 border-2 border-dashed border-gray-700 rounded-lg w-full h-24 flex items-center justify-center mb-2 bg-gray-900"><span className="text-gray-500 text-sm">No image</span></div>
+                        )}
+                        <input type="file" accept="image/*" onChange={e => handleColorChange(index, 'image_file', e.target.files[0])} className="w-full text-xs text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-white hover:file:bg-gray-500" />
                       </div>
                     </div>
                   ))}
@@ -1066,9 +1158,10 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 rounded-lg transition-all"
+                  className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 rounded-lg transition-all disabled:opacity-50"
+                  disabled={loading}
                 >
-                  {editingProduct ? 'Update Product' : 'Add Product'}
+                  {loading ? 'Saving...' : (editingProduct ? 'Update Product' : 'Add Product')}
                 </button>
               </div>
             </form>
@@ -1089,7 +1182,7 @@ export default function AdminDashboard() {
                 <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
-            <form onSubmit={handleAddCategory} className="space-y-6">
+            <form onSubmit={(e) => handleAddCategory(e)} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Category Name *</label>
                 <input
@@ -1306,6 +1399,7 @@ export default function AdminDashboard() {
           </div>
         </Dialog>
       )}
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
     </div>
   )
 }
