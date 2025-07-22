@@ -111,6 +111,7 @@ export default function CategoryPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-gray-100 text-gray-900 px-4 py-12">
       <div className="max-w-5xl mx-auto">
+        <Link href="/" className="inline-block mb-6 text-purple-600 hover:underline font-bold text-lg bg-white rounded-full px-6 py-2 shadow transition-all">← Back to Home</Link>
         <div className="flex flex-col items-center mb-12">
           {mainCategory.image_url && (
             <div className="relative w-full flex justify-center items-center mb-10">

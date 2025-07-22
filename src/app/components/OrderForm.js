@@ -112,7 +112,7 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
     if (err) { setError(err); return; }
     setLoading(true);
     setError('');
-    await supabase.from('orders').insert({
+    const orderData = {
       customer_name: form.customerName,
       phone: form.phone,
       email: form.email,
@@ -131,8 +131,15 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
       selected_size: selectedSize,
       status: 'pending',
       created_at: new Date().toISOString()
-    });
+    };
+    console.log('Order data being sent:', orderData);
+    const { data: supabaseData, error: supabaseError } = await supabase.from('orders').insert(orderData);
+    console.log('Supabase response:', { supabaseData, supabaseError });
     setLoading(false);
+    if (supabaseError) {
+      setError(supabaseError.message || 'Failed to save order.');
+      return;
+    }
     if (onOrderPlaced) onOrderPlaced();
     onClose();
     setForm({

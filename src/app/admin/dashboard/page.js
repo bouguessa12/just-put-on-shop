@@ -642,6 +642,15 @@ export default function AdminDashboard() {
                           <th className="py-3 px-4 text-left">Order ID</th>
                           <th className="py-3 px-4 text-left">Customer</th>
                           <th className="py-3 px-4 text-left">Phone</th>
+                          <th className="py-3 px-4 text-left">Email</th>
+                          <th className="py-3 px-4 text-left">Wilaya</th>
+                          <th className="py-3 px-4 text-left">Baladia</th>
+                          <th className="py-3 px-4 text-left">Address</th>
+                          <th className="py-3 px-4 text-left">Delivery Type</th>
+                          <th className="py-3 px-4 text-left">Product</th>
+                          <th className="py-3 px-4 text-left">Color</th>
+                          <th className="py-3 px-4 text-left">Size</th>
+                          <th className="py-3 px-4 text-left">Notes</th>
                           <th className="py-3 px-4 text-left">Date</th>
                           <th className="py-3 px-4 text-left">Amount</th>
                           <th className="py-3 px-4 text-left">Status</th>
@@ -654,6 +663,15 @@ export default function AdminDashboard() {
                             <td className="py-3 px-4">#{order.id}</td>
                             <td className="py-3 px-4">{order.customer_name}</td>
                             <td className="py-3 px-4">{order.phone}</td>
+                            <td className="py-3 px-4">{order.email}</td>
+                            <td className="py-3 px-4">{order.wilaya}</td>
+                            <td className="py-3 px-4">{order.baladia}</td>
+                            <td className="py-3 px-4">{order.address}</td>
+                            <td className="py-3 px-4">{order.delivery_type}</td>
+                            <td className="py-3 px-4">{order.product_name}</td>
+                            <td className="py-3 px-4">{order.selected_color}</td>
+                            <td className="py-3 px-4">{order.selected_size}</td>
+                            <td className="py-3 px-4">{order.notes}</td>
                             <td className="py-3 px-4">{new Date(order.created_at).toLocaleDateString()}</td>
                             <td className="py-3 px-4 font-bold">{order.total_price?.toLocaleString() || '0'} DZD</td>
                             <td className="py-3 px-4">
@@ -667,38 +685,17 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                                className="text-yellow-400 hover:text-yellow-300 mr-2"
-                                title="Mark as Confirmed"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-9a1 1 0 11-2 0 1 1 0 012 0zm-3 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
-                                </svg>
+                              {/* Actions (confirm, ship, deliver, delete) */}
+                              <button onClick={() => updateOrderStatus(order.id, 'confirmed')} className="text-yellow-400 hover:text-yellow-300 mr-2" title="Mark as Confirmed">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-9a1 1 0 11-2 0 1 1 0 012 0zm-3 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" /></svg>
                               </button>
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'shipped')}
-                                className="text-blue-400 hover:text-blue-300 mr-2"
-                                title="Mark as Shipped"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-9a1 1 0 11-2 0 1 1 0 012 0zm-3 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
-                                </svg>
+                              <button onClick={() => updateOrderStatus(order.id, 'shipped')} className="text-blue-400 hover:text-blue-300 mr-2" title="Mark as Shipped">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-9a1 1 0 11-2 0 1 1 0 012 0zm-3 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" /></svg>
                               </button>
-                              <button 
-                                onClick={() => updateOrderStatus(order.id, 'delivered')}
-                                className="text-green-400 hover:text-green-300"
-                                title="Mark as Delivered"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-9a1 1 0 11-2 0 1 1 0 012 0zm-3 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
-                                </svg>
+                              <button onClick={() => updateOrderStatus(order.id, 'delivered')} className="text-green-400 hover:text-green-300" title="Mark as Delivered">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3-9a1 1 0 11-2 0 1 1 0 012 0zm-3 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" /></svg>
                               </button>
-                              <button 
-                                onClick={() => deleteOrder(order.id)}
-                                className="text-red-400 hover:text-red-300"
-                                title="Delete Order"
-                              >
+                              <button onClick={() => deleteOrder(order.id)} className="text-red-400 hover:text-red-300" title="Delete Order">
                                 <TrashIcon className="w-4 h-4" />
                               </button>
                             </td>

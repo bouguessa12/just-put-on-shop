@@ -1,119 +1,50 @@
-'use client'
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
+export default function AdminLoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-export default function AdminLogin() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          router.replace('/admin/dashboard')
-        }
-      } catch (error) {
-        console.error('Auth check error:', error)
-      }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (email === 'mohamedalaabouguessa@gmail.com' && password === 'jsp-shop-123') {
+      localStorage.setItem('isAdmin', 'true');
+      router.replace('/admin/dashboard');
+    } else {
+      setError('Invalid email or password');
     }
-
-    checkAuth()
-  }, [router])
-
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      })
-
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-        return
-      }
-
-      if (data?.user) {
-        router.replace('/admin/dashboard')
-      } else {
-        setError('Login failed. Please try again.')
-        setLoading(false)
-      }
-    } catch (error) {
-      setError('An unexpected error occurred. Please try again.')
-      console.error('Login error:', error)
-      setLoading(false)
-    }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h2>
-          <p className="text-gray-600">Sign in to access the admin dashboard</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 border-t-8 border-purple-600">
+        <div className="flex flex-col items-center mb-2">
+          <img src="/logo.jpg" alt="Logo" className="w-20 h-20 rounded-full shadow-lg mb-2 border-4 border-purple-200" />
+          <h2 className="text-3xl font-extrabold mb-1 text-purple-800 tracking-tight">Admin Login</h2>
+          <p className="text-gray-500 text-sm">Sign in to access the admin dashboard</p>
         </div>
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              placeholder="admin@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="Enter your password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-lg font-medium transition-colors"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-        
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
-            Need help? Contact the system administrator.
-          </p>
-        </div>
-      </div>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
+          required
+        />
+        {error && <div className="text-red-600 text-sm text-center font-semibold">{error}</div>}
+        <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-green-500 text-white py-3 rounded-lg font-bold text-lg mt-2 shadow-lg hover:from-purple-700 hover:to-green-600 transition-all">Login</button>
+      </form>
     </div>
-  )
+  );
 }
