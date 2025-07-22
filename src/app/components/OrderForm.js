@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import Image from 'next/image';
 
 const WILAYAS = [
   { id: 1, name: 'Adrar' },
@@ -219,7 +220,7 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
                   <label key={idx} className={`flex flex-col items-center cursor-pointer border rounded-lg p-2 ${selectedColor?.color === color.color ? 'border-green-600' : 'border-gray-300'}`}>
                     <input type="radio" name="color" value={color.color} checked={selectedColor?.color === color.color} onChange={() => setSelectedColor(color)} className="mb-1" />
                     {color.image_url ? (
-                      <img src={color.image_url} alt={color.color} className="w-10 h-10 object-cover rounded mb-1" />
+                      <Image src={color.image_url} alt={color.color} width={40} height={40} className="w-10 h-10 object-cover rounded mb-1" />
                     ) : (
                       <span className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center mb-1">🎨</span>
                     )}
@@ -228,7 +229,7 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
                 ))}
               </div>
               {selectedColor && selectedColor.image_url && (
-                <div className="mb-2 flex justify-center"><img src={selectedColor.image_url} alt={selectedColor.color} className="w-24 h-24 object-contain rounded-lg" /></div>
+                <div className="mb-2 flex justify-center"><Image src={selectedColor.image_url} alt={selectedColor.color} width={96} height={96} className="w-24 h-24 object-contain rounded-lg" /></div>
               )}
             </div>
           )}

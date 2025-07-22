@@ -369,7 +369,13 @@ export default function LandingPage() {
                 <div className="space-y-4">
                   {wishlistProducts.map(product => (
                     <div key={product.id} className="flex items-center gap-4 bg-gray-50 rounded-xl p-4 shadow">
-                      <img src={product.image_url || '/placeholder.jpg'} alt={product.name} className="w-20 h-20 object-cover rounded-lg border" />
+                      <Image
+                        src={product.image_url || '/placeholder.jpg'}
+                        alt={product.name}
+                        width={80}
+                        height={80}
+                        className="w-20 h-20 object-cover rounded-lg border"
+                      />
                       <div className="flex-1">
                         <h3 className="font-bold text-lg mb-1">{product.name}</h3>
                         <p className="text-gray-500 text-sm mb-1">{product.description}</p>
@@ -469,9 +475,11 @@ export default function LandingPage() {
                   {newArrivals.map((product, idx) => (
                     <div key={product.id} className="min-w-full flex flex-col md:flex-row bg-white" style={{ minHeight: '420px' }}>
                       <div className="flex-1 flex items-center justify-center p-4 md:p-12">
-                        <img
+                        <Image
                           src={product.image_url || '/placeholder.jpg'}
                           alt={product.name}
+                          width={320}
+                          height={320}
                           className="w-full max-w-xs md:max-w-lg h-[260px] md:h-[400px] object-cover rounded-3xl shadow-2xl border-2 border-gray-200"
                         />
                       </div>
