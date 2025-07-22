@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Dialog } from '@headlessui/react'
 import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, HomeIcon, ShoppingBagIcon, UserCircleIcon, CogIcon, ShoppingCartIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid'
+import Image from 'next/image';
 
 const CLOTHING_SIZES = ['S', 'M', 'L', 'XL']
 const TSHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -412,9 +413,11 @@ export default function AdminDashboard() {
                 {logoError ? (
                   <span className="font-bold text-purple-400">LOGO</span>
                 ) : (
-                  <img 
+                  <Image 
                     src="/logo.jpg" 
                     alt="Logo" 
+                    width={40}
+                    height={40}
                     className="w-full h-full object-cover"
                     onError={() => setLogoError(true)}
                   />
@@ -736,7 +739,13 @@ export default function AdminDashboard() {
                         className="relative h-40 w-full"
                       >
                         {cat.image_url ? (
-                          <img src={cat.image_url} alt={cat.name} className="absolute inset-0 w-full h-full object-cover z-0" />
+                          <Image 
+                            src={cat.image_url} 
+                            alt={cat.name} 
+                            width={320}
+                            height={200}
+                            className="w-full h-full object-cover z-0" 
+                          />
                         ) : (
                           <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
                             <span className="text-3xl">📁</span>
@@ -877,9 +886,11 @@ export default function AdminDashboard() {
                       >
                         <div className="relative aspect-square w-full overflow-hidden bg-gray-900">
                           {product.image_url ? (
-                            <img 
+                            <Image 
                               src={product.image_url} 
                               alt={product.name} 
+                              width={320}
+                              height={320}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                             />
                           ) : (
@@ -1075,7 +1086,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium mb-2">Main Product Image</label>
                   {form.image_url ? (
                     <div className="mb-4">
-                      <img src={form.image_url} alt="Current product" className="max-h-40 object-contain rounded-lg bg-gray-900" />
+                      <Image src={form.image_url} alt="Current product" width={128} height={128} className="max-h-40 object-contain rounded-lg bg-gray-900" />
                     </div>
                   ) : (
                     <div className="bg-gray-700 border-2 border-dashed border-gray-600 rounded-lg w-full h-40 flex items-center justify-center mb-4 bg-gray-900">
@@ -1137,7 +1148,7 @@ export default function AdminDashboard() {
                       <div>
                         <label className="block text-sm mb-2">Color Image</label>
                         {color.image_url ? (
-                          <div className="mb-2"><img src={color.image_url} alt={`${color.color} variant`} className="h-24 object-contain rounded-lg bg-gray-900" /></div>
+                          <div className="mb-2"><Image src={color.image_url} alt={`${color.color} variant`} width={96} height={96} className="h-24 object-contain rounded-lg bg-gray-900" /></div>
                         ) : (
                           <div className="bg-gray-800 border-2 border-dashed border-gray-700 rounded-lg w-full h-24 flex items-center justify-center mb-2 bg-gray-900"><span className="text-gray-500 text-sm">No image</span></div>
                         )}
@@ -1197,7 +1208,7 @@ export default function AdminDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Category Image</label>
                 {newCategoryImageUrl ? (
-                  <img src={newCategoryImageUrl} alt="Preview" className="mb-2 max-h-32 rounded-lg object-contain bg-gray-900" />
+                  <Image src={newCategoryImageUrl} alt="Preview" width={128} height={128} className="mb-2 max-h-32 rounded-lg object-contain bg-gray-900" />
                 ) : null}
                 <input
                   type="file"
@@ -1258,7 +1269,7 @@ export default function AdminDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Category Image</label>
                 {editCategoryImageUrl ? (
-                  <img src={editCategoryImageUrl} alt="Preview" className="mb-2 max-h-32 rounded-lg object-contain bg-gray-900" />
+                  <Image src={editCategoryImageUrl} alt="Preview" width={128} height={128} className="mb-2 max-h-32 rounded-lg object-contain bg-gray-900" />
                 ) : null}
                 <input
                   type="file"
@@ -1306,9 +1317,11 @@ export default function AdminDashboard() {
               
               <div className="relative w-full max-h-[50vh] mb-6 rounded-xl overflow-hidden bg-gray-900">
                 {previewProduct.colors?.[imagePreviewIndex]?.image_url || previewProduct.image_url ? (
-                  <img
+                  <Image
                     src={previewProduct.colors?.[imagePreviewIndex]?.image_url || previewProduct.image_url}
                     alt={previewProduct.name}
+                    width={320}
+                    height={320}
                     className="w-full h-full object-contain"
                   />
                 ) : (
