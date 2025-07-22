@@ -758,7 +758,7 @@ export default function LandingPage() {
             </form>
             <div className="text-center mt-4">
               {authMode === 'login' ? (
-                <span>Don't have an account? <button onClick={() => setAuthMode('signup')} className="text-purple-600 hover:underline">Sign Up</button></span>
+                <span>Don&apos;t have an account? <button onClick={() => setAuthMode('signup')} className="text-purple-600 hover:underline">Sign Up</button></span>
               ) : (
                 <span>Already have an account? <button onClick={() => setAuthMode('login')} className="text-purple-600 hover:underline">Login</button></span>
               )}

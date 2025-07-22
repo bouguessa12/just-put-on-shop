@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Dialog } from '@headlessui/react'
@@ -56,9 +56,20 @@ export default function AdminDashboard() {
   const [editCategoryImageUrl, setEditCategoryImageUrl] = useState('');
   const [editCategoryLoading, setEditCategoryLoading] = useState(false);
 
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
+    let query = supabase.from('products').select('*')
+    if (filterCategory) {
+      query = query.eq('category', filterCategory)
+    }
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (!error) setProducts(data || [])
+    setLoading(false)
+  }, [filterCategory]);
+
   useEffect(() => {
     fetchProducts();
-  }, [filterCategory]);
+  }, [fetchProducts]);
 
   useEffect(() => {
     fetchCategories();
@@ -68,17 +79,6 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/admin/login')
-  }
-
-  const fetchProducts = async () => {
-    setLoading(true)
-    let query = supabase.from('products').select('*')
-    if (filterCategory) {
-      query = query.eq('category', filterCategory)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (!error) setProducts(data || [])
-    setLoading(false)
   }
 
   const fetchCategories = async () => {
