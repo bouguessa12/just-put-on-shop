@@ -2,6 +2,7 @@
 
 import './globals.css';
 import { Inter } from 'next/font/google';
+import { WishlistProvider } from './components/WishlistContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({ children }) {
         white space (padding/margin) around your entire page.
       */}
       <body>
-        {children}
+        <WishlistProvider>
+          {children}
+        </WishlistProvider>
       </body>
     </html>
   );

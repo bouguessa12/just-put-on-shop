@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 
@@ -78,7 +78,24 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedColor, setSelectedColor] = useState(null);
+  // Parse colors
+  let colors = [];
+  try {
+    colors = Array.isArray(product?.colors)
+      ? product.colors
+      : JSON.parse(product?.colors || '[]');
+  } catch {
+    colors = [];
+  }
+  // Set default color from product.selectedColor if present
+  const [selectedColorIndex, setSelectedColorIndex] = useState(() => {
+    if (product?.selectedColor && colors.length > 0) {
+      const idx = colors.findIndex(c => c.name === product.selectedColor.name);
+      return idx >= 0 ? idx : 0;
+    }
+    return 0;
+  });
+  const selectedColor = colors[selectedColorIndex] || null;
   const [selectedSize, setSelectedSize] = useState('');
   if (!open) return null;
 
@@ -127,8 +144,10 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
       total_price: form.totalPrice,
       notes: form.notes,
       selected_color: selectedColor?.color,
+      color: selectedColor?.color,
       selected_color_image_url: selectedColor?.image_url || '',
       selected_size: selectedSize,
+      size: selectedSize,
       status: 'pending',
       created_at: new Date().toISOString()
     };
@@ -225,7 +244,7 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
               <div className="flex flex-wrap gap-3 mb-2">
                 {safeColors.map((color, idx) => (
                   <label key={idx} className={`flex flex-col items-center cursor-pointer border rounded-lg p-2 ${selectedColor?.color === color.color ? 'border-green-600' : 'border-gray-300'}`}>
-                    <input type="radio" name="color" value={color.color} checked={selectedColor?.color === color.color} onChange={() => setSelectedColor(color)} className="mb-1" />
+                    <input type="radio" name="color" value={color.color} checked={selectedColor?.color === color.color} onChange={() => setSelectedColorIndex(idx)} className="mb-1" />
                     {color.image_url ? (
                       <Image src={color.image_url} alt={color.color} width={40} height={40} className="w-10 h-10 object-cover rounded mb-1" />
                     ) : (

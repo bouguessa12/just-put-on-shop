@@ -95,10 +95,28 @@ export default function SubcategoryPage() {
     { id: 57, name: 'In Salah' },
   ];
 
+  // Sync wishlist from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('wishlist');
+      if (stored) {
+        setWishlist(JSON.parse(stored));
+      }
+    }
+  }, []);
+
+  // Update localStorage whenever wishlist changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    }
+  }, [wishlist]);
+
   const toggleWishlist = (productId) => {
-    setWishlist(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+    const idStr = String(productId);
+    setWishlist(prev => prev.includes(idStr) ? prev.filter(id => id !== idStr) : [...prev, idStr]);
   };
-  const isInWishlist = (productId) => wishlist.includes(productId);
+  const isInWishlist = (productId) => wishlist.includes(String(productId));
   const openOrderModal = (product) => {
     setOrderProduct(product);
     setOrderForm((prev) => ({

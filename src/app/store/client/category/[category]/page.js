@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import OrderForm from '@/app/components/OrderForm';
+import { useWishlist } from '@/app/components/WishlistContext';
+import ProductModal from '@/app/components/ProductModal';
 
 export default function CategoryPage() {
   const router = useRouter();
@@ -16,16 +18,14 @@ export default function CategoryPage() {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [wishlist, setWishlist] = useState([]);
+  const { wishlist, toggleWishlist, isInWishlist } = useWishlist();
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderProduct, setOrderProduct] = useState(null);
   const [orderForm, setOrderForm] = useState({ name: '', phone: '', address: '' });
   const [orderLoading, setOrderLoading] = useState(false);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productModalProduct, setProductModalProduct] = useState(null);
 
-  const toggleWishlist = (productId) => {
-    setWishlist(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
-  };
-  const isInWishlist = (productId) => wishlist.includes(productId);
   const openOrderModal = (product) => {
     setOrderProduct(product);
     setOrderModalOpen(true);
@@ -49,6 +49,16 @@ export default function CategoryPage() {
     setOrderLoading(false);
     setOrderModalOpen(false);
     setOrderForm({ name: '', phone: '', address: '' });
+  };
+
+  const handleProductClick = (product) => {
+    setProductModalProduct(product);
+    setProductModalOpen(true);
+  };
+  const handleProductModalOrder = (color) => {
+    setProductModalOpen(false);
+    setOrderProduct({ ...productModalProduct, selectedColor: color });
+    setOrderModalOpen(true);
   };
 
   useEffect(() => {
@@ -184,11 +194,19 @@ export default function CategoryPage() {
           </div>
         ) : (
           <div className="text-center text-gray-500 py-20">
-            <ProductGrid collectionName={mainCategory.name} wishlist={wishlist} toggleWishlist={toggleWishlist} isInWishlist={isInWishlist} openOrderModal={openOrderModal} />
+            <ProductGrid collectionName={mainCategory.name} subCategoryName={null} wishlist={wishlist} toggleWishlist={toggleWishlist} isInWishlist={isInWishlist} openOrderModal={openOrderModal} />
           </div>
         )}
       </div>
       <OrderForm product={orderProduct} open={orderModalOpen} onClose={() => setOrderModalOpen(false)} onOrderPlaced={() => {/* Optionally show a toast or refresh */}} />
+      {productModalOpen && productModalProduct && (
+        <ProductModal
+          product={productModalProduct}
+          open={productModalOpen}
+          onClose={() => setProductModalOpen(false)}
+          onOrder={handleProductModalOrder}
+        />
+      )}
     </main>
   );
 }
@@ -215,10 +233,10 @@ function ProductGrid({ collectionName, subCategoryName, wishlist, toggleWishlist
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {products.map(product => (
-          <div key={product.id} className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center relative">
+          <div key={product.id} className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center relative cursor-pointer" onClick={() => handleProductClick(product)}>
             {/* Wishlist Heart Icon */}
             <button
-              onClick={() => toggleWishlist(product.id)}
+              onClick={e => { e.stopPropagation(); toggleWishlist(product.id); }}
               className="absolute top-3 right-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md"
               aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
             >
@@ -234,7 +252,7 @@ function ProductGrid({ collectionName, subCategoryName, wishlist, toggleWishlist
             <span className="text-purple-600 font-bold mb-2">{product.price} DZD</span>
             <div className="flex gap-2 mt-2">
               <button
-                onClick={() => openOrderModal(product)}
+                onClick={e => { e.stopPropagation(); openOrderModal(product); }}
                 className="px-5 py-2 rounded-full bg-green-600 text-white font-bold text-base hover:bg-green-700 transition"
               >
                 Order Now

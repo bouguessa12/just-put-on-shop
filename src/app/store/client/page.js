@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import OrderForm from '@/app/components/OrderForm';
+import ProductModal from '../../components/ProductModal';
 
 // Algeria wilayas and baladias
 const WILAYAS = [
@@ -93,20 +94,42 @@ export default function ClientStorePage() {
     totalPrice: 0,
     notes: ''
   });
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productModalProduct, setProductModalProduct] = useState(null);
+
+  // Sync wishlist from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('wishlist');
+      if (stored) {
+        setWishlist(JSON.parse(stored));
+      }
+    }
+  }, []);
+
+  // Update localStorage whenever wishlist changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    }
+  }, [wishlist]);
 
   // Wishlist functions
   const toggleWishlist = (productId) => {
+    const idStr = String(productId);
     setWishlist(prev => {
-      if (prev.includes(productId)) {
-        return prev.filter(id => id !== productId);
+      let updated;
+      if (prev.includes(idStr)) {
+        updated = prev.filter(id => id !== idStr);
       } else {
-        return [...prev, productId];
+        updated = [...prev, idStr];
       }
+      return updated;
     });
   };
 
   const isInWishlist = (productId) => {
-    return wishlist.includes(productId);
+    return wishlist.includes(String(productId));
   };
 
   function getCategoryFromURL() {
@@ -255,6 +278,16 @@ export default function ClientStorePage() {
     setOrderForm({ name: '', phone: '', address: '' });
   };
 
+  const handleProductClick = (product) => {
+    setProductModalProduct(product);
+    setProductModalOpen(true);
+  };
+  const handleProductModalOrder = (color) => {
+    setProductModalOpen(false);
+    setOrderProduct({ ...productModalProduct, selectedColor: color });
+    setOrderModalOpen(true);
+  };
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -306,7 +339,7 @@ export default function ClientStorePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {filteredProducts.map((product) => (
-              <div key={product.id} className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+              <div key={product.id} className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col cursor-pointer" onClick={() => handleProductClick(product)}>
                 <div className="relative w-full h-64 bg-gray-100 flex items-center justify-center">
                   {/* Wishlist Heart Icon */}
                   <button
@@ -347,7 +380,10 @@ export default function ClientStorePage() {
                   <h2 className="text-lg font-semibold mb-1 truncate">{product.name}</h2>
                   <p className="text-gray-500 text-sm line-clamp-2 mb-2">{product.description}</p>
                   <button 
-                    onClick={() => openOrderModal(product)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openOrderModal(product);
+                    }}
                     className="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"
                   >
                     Order Now
@@ -361,6 +397,14 @@ export default function ClientStorePage() {
 
       {/* Order Modal */}
       <OrderForm product={orderProduct} open={orderModalOpen} onClose={() => setOrderModalOpen(false)} onOrderPlaced={() => {/* Optionally show a toast or refresh */}} />
+      {productModalOpen && productModalProduct && (
+        <ProductModal
+          product={productModalProduct}
+          open={productModalOpen}
+          onClose={() => setProductModalOpen(false)}
+          onOrder={handleProductModalOrder}
+        />
+      )}
     </main>
   );
 } 
