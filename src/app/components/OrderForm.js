@@ -64,6 +64,7 @@ const WILAYAS = [
 ];
 
 export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
+  if (!open) return null;
   const [form, setForm] = useState({
     customerName: '',
     phone: '',
@@ -97,7 +98,6 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
   });
   const selectedColor = colors[selectedColorIndex] || null;
   const [selectedSize, setSelectedSize] = useState('');
-  if (!open) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
