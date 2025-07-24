@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 
 export default function ProductModal({ product, open, onClose, onOrder }) {
+  const [colorIndex, setColorIndex] = useState(0);
   if (!product || !open) return null;
   // Parse colors array
   let colors = [];
@@ -13,7 +14,6 @@ export default function ProductModal({ product, open, onClose, onOrder }) {
   } catch {
     colors = [];
   }
-  const [colorIndex, setColorIndex] = useState(0);
   const selectedColor = colors[colorIndex] || null;
 
   const handlePrev = () => {
