@@ -64,7 +64,6 @@ const WILAYAS = [
 ];
 
 export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
-  if (!open) return null;
   const [form, setForm] = useState({
     customerName: '',
     phone: '',
@@ -79,6 +78,9 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState('');
+  if (!open) return null;
   // Parse colors
   let colors = [];
   try {
@@ -89,15 +91,8 @@ export default function OrderForm({ product, open, onClose, onOrderPlaced }) {
     colors = [];
   }
   // Set default color from product.selectedColor if present
-  const [selectedColorIndex, setSelectedColorIndex] = useState(() => {
-    if (product?.selectedColor && colors.length > 0) {
-      const idx = colors.findIndex(c => c.name === product.selectedColor.name);
-      return idx >= 0 ? idx : 0;
-    }
-    return 0;
-  });
+  // (move this logic to a useEffect if you want to update on product change)
   const selectedColor = colors[selectedColorIndex] || null;
-  const [selectedSize, setSelectedSize] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
